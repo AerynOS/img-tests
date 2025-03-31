@@ -11,3 +11,5 @@ serpentos.xml
 .#sosroot.lck
 issue
 nsswitch.conf
+*.sha256sum
+
