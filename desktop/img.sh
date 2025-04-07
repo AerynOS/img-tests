@@ -40,19 +40,23 @@ function print_valid_compression_types() {
 }
 
 function usage() {
-    echo -e "\nUsage: sudo ./img.sh -c <compression type> -o <output>.iso -p <package list>\n"
+    echo -e "\nUsage: sudo ./img.sh -c <compression type> -o <output>.iso -p <package list> -t <tmpdir> -y\n"
     print_valid_compression_types
-    echo -e "\nThe default compression type is lz4 (quick, easy to spot size regressions).\n"
-    echo -e "The best tradeoff between size and speed is zstd3.\n"
-    echo -e "\nThe default output is 'aerynos' (becomes 'aerynos.iso')"
-    echo -e "\nThe default package list is pkglist.\n"
+    echo -e "\nThe default compression type is lz4 (quick, easy to spot size regressions)."
+    echo -e "-- The best tradeoff between size and speed is zstd3."
+    echo -e "\nThe default output is 'aerynos' (becomes 'aerynos.iso')."
+    echo -e "\nThe default package list is the file 'gnome_pkglist'."
+    echo -e "\nThe default tmp dir is '/tmp' (on some distros, /var/tmp must be used due to permissions)."
+    echo -e "\nTip: Adding '-y' specifies that you do not want to be prompted to continue generating the iso."
 }
 
 # defaults
-PACKAGE_LIST="pkglist"
+ASK="yes"
+PACKAGE_LIST="gnome_pkglist"
 OUTPUT="aerynos"
+TMPDIR="/tmp"
 
-while getopts 'c:o:p:' opt
+while getopts 'c:o:p:t:y?' opt
 do
   case "$opt" in
   c)
@@ -83,11 +87,30 @@ do
     ;;
   p)
     PACKAGE_LIST="$OPTARG"
-    if [[ -z "$PACKAGE_LIST" ]]; then
+    if [[ -z "${PACKAGE_LIST}" ]]; then
         echo "No package list specified."
         usage
         exit 1
+    else
+        # we're good, carry on
+        :
     fi
+    ;;
+  t)
+    TMPDIR="$OPTARG"
+    if [[ -z "${TMPDIR}" ]]; then
+        echo "No tmp dir specified."
+        usage
+        exit 1
+    else
+        # we're good, carry on
+        :
+    fi
+    ;;
+  y)
+    # we will check for the value of ${ASK} later on
+    ASK="no"
+    :
     ;;
   ?)
     usage
@@ -97,12 +120,11 @@ do
 done
 
 # Let the user set the COMPRESSION variable and document supported compressors in the README
-export COMPRESSOR="${COMPRESSION:-lz4}"
-echo "Using compression type: $COMPRESSOR"
+COMPRESSOR="${COMPRESSION:-lz4}"
 
 WORK="$(dirname $(realpath $0))"
 echo ">>> workdir \${WORK}: ${WORK}"
-TMPFS="/tmp/aerynos_iso"
+TMPFS="${TMPDIR}/aerynos_iso"
 echo ">>> tmpfs dir \${TMPFS}: ${TMPFS}"
 
 BINARIES=(
@@ -132,7 +154,7 @@ done
 if [[ ${BINARY_NOT_FOUND} -gt 0 ]]; then
     die "\nNecessary prerequisites not met, please install missing tool(s).\n"
 else
-    echo -e "\nAll necessary binaries found, generating AerynOS linux-desktop ISO image...\n"
+    echo -e "\nAll necessary binaries found."
 fi
 
 # Pkg list check
@@ -149,6 +171,10 @@ test -f ${WORK}/initrdlist || die "\nThis script MUST be run from within the des
 readarray -t initrd < "${WORK}/initrdlist"
 
 cleanup () {
+    if [[ -z "${TMPFS}" || "${TMPFS}" == "" ]]; then
+        echo "\$TMPFS is not set (or is empty), cannot clean up -- exiting."
+        exit 1
+    fi
     echo -e "\nCleaning up existing dirs, files and mount points..."
     # clean up dirs (if something fails here, let the remaining lines take care of it)
     rm -rf "${TMPFS}"/* || echo "- Removing ${TMPFS}/* failed."
@@ -168,135 +194,167 @@ die_and_cleanup() {
     die $*
 }
 
-# From here on, exit from script on any non-zero exit status command result
-set -e
 
-export BOOT="${TMPFS}/boot"
-export CACHE="${WORK}/cached_stones"
-export MOUNT="${TMPFS}/mount"
-export SFSDIR="${TMPFS}/aerynosfs"
-export CHROOT="systemd-nspawn --as-pid2 --private-users=identity --user=0 --quiet"
+final_cleanup() {
+    cleanup
 
+    # all exported variables need to be unset
+    for v in BOOT CACHE CHROOT MOSS MOUNT RUST_BACKTRACE SFSDIR; do
+        unset "${v}" || true
+    done
+}
 
+build() {
+    # From here on, exit from script on any non-zero exit status command result
+    set -e
 
-# Use a permanent cache for downloaded .stones
-mkdir -pv "${CACHE}"
+    export BOOT="${TMPFS}/boot"
+    export CACHE="${WORK}/cached_stones"
+    export MOUNT="${TMPFS}/mount"
+    export SFSDIR="${TMPFS}/aerynosfs"
+    export CHROOT="systemd-nspawn --as-pid2 --private-users=identity --user=0 --quiet"
 
-# Stash boot assets
-mkdir -pv "${BOOT}"
+    # Use a permanent cache for downloaded .stones
+    mkdir -pv "${CACHE}"
 
-# Get it right first time.
-mkdir -pv "${MOUNT}" "${SFSDIR}"
-chown -Rc root:root "${MOUNT}" "${SFSDIR}"
-# Only chmod directories
-chmod -Rc u=rwX,g=rX,o=rX "${MOUNT}" "${SFSDIR}"
+    # Stash boot assets
+    mkdir -pv "${BOOT}"
 
-export RUST_BACKTRACE=1
+    # Get it right first time.
+    mkdir -pv "${MOUNT}" "${SFSDIR}"
+    chown -Rc root:root "${MOUNT}" "${SFSDIR}"
+    # Only chmod directories
+    chmod -Rc u=rwX,g=rX,o=rX "${MOUNT}" "${SFSDIR}"
 
-export MOSS="moss -D ${SFSDIR} --cache ${CACHE}"
+    export RUST_BACKTRACE=1
 
-echo ">>> Add raw volatile repository to ${SFSDIR}/ ..."
-time ${MOSS} repo add volatile https://packages.aerynos.dev/volatile/x86_64/stone.index || die_and_cleanup "Adding moss repo failed!"
+    export MOSS="moss -D ${SFSDIR} --cache ${CACHE}"
 
-echo ">>> Install packages to ${SFSDIR}/ ..."
-time ${MOSS} install -y "${PACKAGES[@]}" || die_and_cleanup "Installing packages failed!"
+    echo ">>> Add raw volatile repository to ${SFSDIR}/ ..."
+    time ${MOSS} repo add volatile https://packages.aerynos.dev/volatile/x86_64/stone.index || die_and_cleanup "Adding moss repo failed!"
 
-echo ">>> Set up basic environment in ${SFSDIR}/ ..."
-time ${CHROOT} -D "${SFSDIR}" systemd-firstboot --force --delete-root-password --locale=en_US.UTF-8 --timezone=UTC --root-shell=/usr/bin/bash && echo ">>>>> systemd-firstboot run done."
+    echo ">>> Install packages to ${SFSDIR}/ ..."
+    time ${MOSS} install -y "${PACKAGES[@]}" || die_and_cleanup "Installing packages failed!"
 
-echo ">>> Configuring live user."
-time ${CHROOT} -D "${SFSDIR}" useradd -c "Live User" -d "/home/live" -G "audio,adm,wheel,render,input,users" -m -U -s "/usr/bin/bash" live
-cp -R ${WORK}/rootfs_extra/etc/* "${SFSDIR}/etc/."
-chown -R root:root "${SFSDIR}/etc"
-${CHROOT} -D "${SFSDIR}" chown -R live:live /home/live
-${CHROOT} -D "${SFSDIR}" passwd -d live
+    echo ">>> Set up basic environment in ${SFSDIR}/ ..."
+    time ${CHROOT} -D "${SFSDIR}" systemd-firstboot --force --delete-root-password --locale=en_US.UTF-8 --timezone=UTC --root-shell=/usr/bin/bash && echo ">>>>> systemd-firstboot run done."
 
-echo ">>> Forcibly refreshing flatpak."
-time ${CHROOT} -D "${SFSDIR}" flatpak update --system --appstream --no-deps --no-related -v
+    echo ">>> Configuring live user."
+    time ${CHROOT} -D "${SFSDIR}" useradd -c "Live User" -d "/home/live" -G "audio,adm,wheel,render,input,users" -m -U -s "/usr/bin/bash" live
+    cp -R ${WORK}/rootfs_extra/etc/* "${SFSDIR}/etc/."
+    chown -R root:root "${SFSDIR}/etc"
+    ${CHROOT} -D "${SFSDIR}" chown -R live:live /home/live
+    ${CHROOT} -D "${SFSDIR}" passwd -d live
 
-echo ">>> Extract assets..."
-cp -av "${SFSDIR}/usr/lib/systemd/boot/efi/systemd-bootx64.efi" "${BOOT}/bootx64.efi"
-cp -av "${SFSDIR}"/usr/lib/kernel/*/vmlinuz "${BOOT}/kernel"
+    echo ">>> Forcibly refreshing flatpak."
+    time ${CHROOT} -D "${SFSDIR}" flatpak update --system --appstream --no-deps --no-related -v
 
-echo ">>> Install dracut in ${SFSDIR}/ ..."
-time ${MOSS} install "${initrd[@]}" -y || die_and_cleanup "Failed to install initrd packages!"
+    echo ">>> Extract assets..."
+    cp -av "${SFSDIR}/usr/lib/systemd/boot/efi/systemd-bootx64.efi" "${BOOT}/bootx64.efi"
+    cp -av "${SFSDIR}"/usr/lib/kernel/*/vmlinuz "${BOOT}/kernel"
 
-echo ">>> Regenerate dracut..."
-kver=$(ls "${SFSDIR}/usr/lib/modules")
-time ${CHROOT} -D "${SFSDIR}/" dracut --early-microcode --hardlink -N --nomdadmconf --nolvmconf --kver ${kver} --add "bash dash systemd lvm dm dmsquash-live plymouth" --fwdir /usr/lib/firmware --tmpdir /tmp --zstd --strip /initrd -v
-mv -v "${SFSDIR}/initrd" "${BOOT}/initrd"
+    echo ">>> Install dracut in ${SFSDIR}/ ..."
+    time ${MOSS} install "${initrd[@]}" -y || die_and_cleanup "Failed to install initrd packages!"
 
-echo ">>> Roll back and prune to keep only initially installed state and remove downloads ..."
-time ${MOSS} state activate 1 -y || die_and_cleanup "Failed to activate initial state in ${TMPFS}/ !"
-time ${MOSS} state prune -k 1 --include-newer -y || die_and_cleanup "Failed to prune moss state in ${TMPFS}/ !"
+    echo ">>> Regenerate dracut..."
+    kver=$(ls "${SFSDIR}/usr/lib/modules")
+    time ${CHROOT} -D "${SFSDIR}/" dracut --early-microcode --hardlink -N --nomdadmconf --nolvmconf --kver ${kver} --add "bash dash systemd lvm dm dmsquash-live plymouth" --fwdir /usr/lib/firmware --tmpdir /tmp --zstd --strip /initrd -v
+    mv -v "${SFSDIR}/initrd" "${BOOT}/initrd"
 
-# Remove downloaded .stones to lower size of generated ISO
-rm -rf "${SFSDIR}"/.moss/cache/downloads/*
+    echo ">>> Roll back and prune to keep only initially installed state and remove downloads ..."
+    time ${MOSS} state activate 1 -y || die_and_cleanup "Failed to activate initial state in ${TMPFS}/ !"
+    time ${MOSS} state prune -k 1 --include-newer -y || die_and_cleanup "Failed to prune moss state in ${TMPFS}/ !"
 
-SFSSIZE=$(du -BMiB -s ${TMPFS}|cut -f1|sed -e 's|MiB||g')
-echo ">>> ${SFSDIR} size: ${SFSSIZE} MiB"
+    # Remove downloaded .stones to lower size of generated ISO
+    rm -rf "${SFSDIR}"/.moss/cache/downloads/*
 
-echo ">>> Generate the LiveOS image structure..."
-mkdir -pv "${TMPFS}/root/LiveOS/"
+    SFSSIZE=$(du -BMiB -s ${TMPFS}|cut -f1|sed -e 's|MiB||g')
+    echo ">>> ${SFSDIR} size: ${SFSSIZE} MiB"
 
-# Show the contents that will get included to satisfy ourselves that the source dirs specified below are sufficient
-ls -la "${SFSDIR}/"
+    echo ">>> Generate the LiveOS image structure..."
+    mkdir -pv "${TMPFS}/root/LiveOS/"
 
-echo ">>> Compress the LiveOS squashfs.img using the ${COMPRESSOR} compression preset..."
-time mksquashfs "${SFSDIR}"/* "${SFSDIR}/.moss" "${TMPFS}/root/LiveOS/squashfs.img" \
-  -root-becomes LiveOS -keep-as-directory -b 1M -progress -comp ${COMPRESSION_ARGS[$COMPRESSOR]}
+    # Show the contents that will get included to satisfy ourselves that the source dirs specified below are sufficient
+    ls -la "${SFSDIR}/"
 
-echo ">>> Create and mount the efi.img backing file..."
-EFI_SIZE=$(du -c "${BOOT}/bootx64.efi" "${BOOT}/kernel" "${BOOT}/initrd" "${WORK}/live-os.conf" | grep total | awk '{print $1}')
-EFI_SIZE=$((EFI_SIZE + 1024)) # Add some buffer space
-fallocate -l ${EFI_SIZE}K "${TMPFS}/efi.img"
-mkfs.vfat -F 12 "${TMPFS}/efi.img" -n EFIBOOTISO
-mount -vo loop "${TMPFS}/efi.img" "${MOUNT}"
+    echo ">>> Compress the LiveOS squashfs.img using the ${COMPRESSOR} compression preset..."
+    time mksquashfs "${SFSDIR}"/* "${SFSDIR}/.moss" "${TMPFS}/root/LiveOS/squashfs.img" \
+      -root-becomes LiveOS -keep-as-directory -b 1M -progress -comp ${COMPRESSION_ARGS[$COMPRESSOR]}
 
-echo ">>> Set up EFI image..."
-mkdir -pv "${MOUNT}/EFI/Boot/"
-cp -v "${BOOT}/bootx64.efi" "${MOUNT}/EFI/Boot/bootx64.efi"
-sync
-mkdir -pv "${MOUNT}/loader/entries/"
-cp -v "${WORK}/live-os.conf" "${MOUNT}/loader/entries/"
-cp -v "${BOOT}/kernel" "${MOUNT}/"
-cp -v "${BOOT}/initrd" "${MOUNT}/"
-umount -Rlv "${MOUNT}"
+    echo ">>> Create and mount the efi.img backing file..."
+    EFI_SIZE=$(du -c "${BOOT}/bootx64.efi" "${BOOT}/kernel" "${BOOT}/initrd" "${WORK}/live-os.conf" | grep total | awk '{print $1}')
+    EFI_SIZE=$((EFI_SIZE + 1024)) # Add some buffer space
+    fallocate -l ${EFI_SIZE}K "${TMPFS}/efi.img"
+    mkfs.vfat -F 12 "${TMPFS}/efi.img" -n EFIBOOTISO
+    mount -vo loop "${TMPFS}/efi.img" "${MOUNT}"
 
-echo ">>> Put the new EFI image in the correct place..."
-mkdir -pv "${TMPFS}/root/EFI/Boot"
-cp -v "${TMPFS}/efi.img" "${TMPFS}/root/EFI/Boot/efiboot.img"
+    echo ">>> Set up EFI image..."
+    mkdir -pv "${MOUNT}/EFI/Boot/"
+    cp -v "${BOOT}/bootx64.efi" "${MOUNT}/EFI/Boot/bootx64.efi"
+    sync
+    mkdir -pv "${MOUNT}/loader/entries/"
+    cp -v "${WORK}/live-os.conf" "${MOUNT}/loader/entries/"
+    cp -v "${BOOT}/kernel" "${MOUNT}/"
+    cp -v "${BOOT}/initrd" "${MOUNT}/"
+    umount -Rlv "${MOUNT}"
 
-echo ">>> Copy the isolinux bootloader..."
-mkdir -pv "${TMPFS}/root/isolinux/"
-cp -v "${WORK}/../iso_assets/isolinux.bin" "${TMPFS}/root/isolinux/."
+    echo ">>> Put the new EFI image in the correct place..."
+    mkdir -pv "${TMPFS}/root/EFI/Boot"
+    cp -v "${TMPFS}/efi.img" "${TMPFS}/root/EFI/Boot/efiboot.img"
 
-echo ">>> Create the ISO file..."
-xorriso -as mkisofs \
-    -o "${WORK}/${OUTPUT}.iso" \
-    -R -J -v -d -N \
-    -x "${OUTPUT}.iso" \
-    -hide-rr-moved \
-    -isohybrid-mbr ${WORK}/../iso_assets/isohdpfx.bin \
-    -b isolinux/isolinux.bin \
-    -c isolinux/boot.cat \
-    -boot-load-size 4 \
-    -boot-info-table \
-    -no-emul-boot \
-    -eltorito-alt-boot \
-    -e EFI/Boot/efiboot.img \
-    -no-emul-boot \
-    -isohybrid-gpt-basdat \
-    -V "AERYNOSLIVE" -A "AERYNOSLIVE" \
-    "${TMPFS}/root"
+    echo ">>> Copy the isolinux bootloader..."
+    mkdir -pv "${TMPFS}/root/isolinux/"
+    cp -v "${WORK}/../iso_assets/isolinux.bin" "${TMPFS}/root/isolinux/."
 
-# The gnarly sed operation is here because the uutils-coreutils `ls` does not output the unit next to the size
-echo "Successfully built $(ls -s --block-size=M ${OUTPUT}.iso | sed 's|\([[:digit:]]+*\) \(.*\)$|\1M \2|g') using $COMPRESSION compression."
+    echo ">>> Create the ISO file..."
+    xorriso -as mkisofs \
+        -o "${WORK}/${OUTPUT}.iso" \
+        -R -J -v -d -N \
+        -x "${OUTPUT}.iso" \
+        -hide-rr-moved \
+        -isohybrid-mbr ${WORK}/../iso_assets/isohdpfx.bin \
+        -b isolinux/isolinux.bin \
+        -c isolinux/boot.cat \
+        -boot-load-size 4 \
+        -boot-info-table \
+        -no-emul-boot \
+        -eltorito-alt-boot \
+        -e EFI/Boot/efiboot.img \
+        -no-emul-boot \
+        -isohybrid-gpt-basdat \
+        -V "AERYNOSLIVE" -A "AERYNOSLIVE" \
+        "${TMPFS}/root"
 
-cleanup
+    # The gnarly sed operation is here because the uutils-coreutils `ls` does not output the unit next to the size
+    echo "Successfully built $(ls -s --block-size=M ${OUTPUT}.iso | sed 's|\([[:digit:]]+*\) \(.*\)$|\1M \2|g') using ${COMPRESSOR} compression."
 
-for v in BOOT CACHE CHROOT COMPRESSOR MOSS MOUNT RUST_BACKTRACE SFSDIR TMPFS WORK; do
-    unset "${v}" || true
-done
+    final_cleanup
+}
 
-exit 0
+ask_to_continue () {
+    # Show a status page up front before generating the iso to avoid surprises
+
+    echo -e "\nGenerating AerynOS linux-desktop ISO image using:\n"
+    echo -e "- compression : ${COMPRESSOR}"
+    echo -e "- package list: ${PACKAGE_LIST}"
+    echo -e "- output name : ${OUTPUT}.iso"
+    echo -e "- tmp dir     : ${TMPDIR}"
+
+    if [[ "${ASK}" == "yes" ]]; then
+        echo -e "\nWould you like to continue? (Tip: Use 'sudo ./img.sh -y' to avoid seeing this prompt)"
+        select yn in "Yes" "No"; do
+          case $yn in
+            Yes ) build && exit 0;;
+            No ) die_and_cleanup "\nUser aborted script.\n";;
+          esac
+        done
+    else
+        echo -e "\nUser invoked with '-y' flag, continuing without prompting..."
+        build && exit 0
+    fi
+}
+
+ask_to_continue
+
+# ensure that e.g. CTRL+C cleans up after itself
+trap final_cleanup EXIT
