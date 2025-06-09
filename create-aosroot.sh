@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-#
+# 
+# SPDX-FileCopyrightText: © 2020-2025 Serpent OS Developers
+# SPDX-FileCopyrightText: © 2025- AerynOS Developers
 # SPDX-License-Identifier: MPL-2.0
 #
-# Copyright: © 2023 Serpent OS Developers
-#
 
-# create-sosroot.sh:
-# script for conveniently creating a clean /var/lib/machines/sosroot/
-# directory suitable for use as the root in serpent os systemd-nspawn
+# create-aosroot.sh:
+# script for conveniently creating a clean /var/lib/machines/aosroot/
+# directory suitable for use as the root in AerynOS systemd-nspawn
 # container or linux-kvm kernel driven qemu-kvm virtual machine.
 
 source ./basic-setup.sh
@@ -21,20 +21,20 @@ You can now start a systemd-nspawn container with:
 
  sudo systemd-nspawn --bind=${BOULDERCACHE}/ -D ${SOSROOT}/ -b
   OR
- sudo ./boot-systemd-nspawn-container.sh (rewritten on each ./create-sosroot.sh run)
+ sudo ./boot-systemd-nspawn-container.sh (rewritten on each ./create-aosroot.sh run)
 
 Do a 'systemctl poweroff' inside the container to shut it down.
 
 The container can also be shut down with:
 
- sudo machinectl stop sosroot
+ sudo machinectl stop aosroot
 
 in a shell outside the container.
 
-If you want to be able to use your sosroot/ with virt-manager,
+If you want to be able to use your aosroot/ with virt-manager,
 you can set the DESTDIR variable when calling ${0} like so:
 
-    DESTDIR="/var/lib/machines/sosroot" create-sosroot.sh
+    DESTDIR="/var/lib/machines/aosroot" create-aosroot.sh
 
 EOF
 }
@@ -44,13 +44,13 @@ createBootScript () {
     cat <<EOF > boot-systemd-nspawn-container.sh
 #!/usr/bin/env bash
 #
-exec sudo systemd-nspawn --bind=${BOULDERCACHE}/ -D ${SOSROOT}/ -b
+exec sudo systemd-nspawn --bind=${BOULDERCACHE}/ -D ${AOSROOT}/ -b
 EOF
 }
 
 checkPrereqs
 basicSetup
 showHelp
-# Make it simple to boot into the created sosroot at a later point
+# Make it simple to boot into the created aosroot at a later point
 createBootScript && chmod a+x boot-systemd-nspawn-container.sh
 cleanEnv

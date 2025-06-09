@@ -22,9 +22,9 @@ Supported options:
     just [img_script] [target] [flavor] [compression] [output] [memory] [firmware] recipe
     (most people should only use the flavor, compression, output, or firmware options)
 Examples:
-    just build  # will build a quick, lz4 compressed gnome "gnome-snek-lz4.iso" by default
-    just flavor="gnome" compression="zstd3" output="serpent-gnome-test" build
-    just output="serpent-gnome-test" memory="8192m" firmware="/usr/share/edk2-ovmf/x64/OVMF_CODE.fd" boot
+    just build  # will build a quick, lz4 compressed gnome "aerynos.iso" by default
+    just flavor="gnome" compression="zstd3" output="aos-gnome-test" build
+    just output="aos-gnome-test" memory="8192m" firmware="/usr/share/edk2-ovmf/x64/OVMF_CODE.fd" boot
     just flavor="cosmic" build-and-boot
 Available recipes:
     boot           # Boot the specified ISO using QEMU with the specified settings
