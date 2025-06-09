@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 #
+# SPDX-FileCopyrightText: © 2023-2025 Serpent OS Developers
+# SPDX-FileCopyrightText: © 2025- AerynOS Developers
 # SPDX-License-Identifier: MPL-2.0
-#
-# Copyright: © 2023-2024 Serpent OS Developers
 #
 
 # shared-setup.sh:
 # script with shared utility functions for conveniently creating a
-# clean serpent-os root directory  directory suitable for use as the
-# root in serpent os systemd-nspawn container or linux-kvm kernel driven
+# clean AerynOS root directory  directory suitable for use as the
+# root in AerynOS systemd-nspawn container or linux-kvm kernel driven
 # qemu-kvm virtual machine.
 
 # target dirs
-# use a default sosroot
-SOSROOT="${DESTDIR:-${PWD}/sosroot}"
+# use a default aosroot
+AOSROOT="${DESTDIR:-${PWD}/aosroot}"
 BOULDERCACHE="${HOME}/.cache/boulder"
 
 # utility functions
@@ -45,7 +45,7 @@ die() {
 checkPrereqs () {
     printInfo "Checking prerequisites..."
     test -f ./pkglist-base || die "\nRun this script from the root of the img-tests/ repo clone!\n"
-    test -x $(command -v moss) || die "\n${0} assumes moss is installed. See https://github.com/serpent-os/moss/\n"
+    test -x $(command -v moss) || die "\n${0} assumes moss is installed. See https://github.com/AerynOS/os-tools/\n"
 }
 
 # base packages
@@ -76,55 +76,56 @@ basicSetup () {
     local moss="$(command -v moss)"
     printInfo "Using moss binary found here: ${moss} ($(${moss} version))"
 
-    MSG="Removing old ${SOSROOT} directory..."
+    MSG="Removing old ${AOSROOT} directory..."
     printInfo "${MSG}"
-    sudo rm -rf "${SOSROOT}" || die "${MSG}"
+    sudo rm -rf "${AOSROOT}" || die "${MSG}"
 
     MSG="Making sure ${BOULDERCACHE} directory exists..."
     printInfo "${MSG}"
     sudo mkdir -pv "${BOULDERCACHE}"
 
-    MSG="Creating new ${SOSROOT} directory w/baselayout skeleton..."
+    MSG="Creating new ${AOSROOT} directory w/baselayout skeleton..."
     printInfo "${MSG}"
-    sudo mkdir -pv "${SOSROOT}"/{etc,proc,run,sys,var,var/local,"${BOULDERCACHE}"} || die "${MSG}"
+    sudo mkdir -pv "${AOSROOT}"/{etc,proc,run,sys,var,var/local,"${BOULDERCACHE}"} || die "${MSG}"
 
     # No longer necessary -- moss triggers have been fixed to respect trigger dep order now
     #MSG="Ensuring that we get a working nss-systemd-compatible nssswitch.conf..."
     #printInfo "${MSG}"
     #createNssswitchConf || die "${MSG}"
-    #sudo cp -v ./nsswitch.conf "${SOSROOT}"/etc/ || die "${MSG}"
+    #sudo cp -v ./nsswitch.conf "${AOSROOT}"/etc/ || die "${MSG}"
 
     MSG="Ensuring that various network protocols function..."
     printInfo "${MSG}"
-    sudo cp -va /etc/protocols "${SOSROOT}"/etc/ || die "${MSG}"
+    sudo cp -va /etc/protocols "${AOSROOT}"/etc/ || die "${MSG}"
 
-    MSG="Adding volatile serpent os repository..."
+    MSG="Adding volatile AerynOS repository..."
     printInfo "${MSG}"
-    sudo ${moss} -D "${SOSROOT}" -y repo add volatile https://packages.serpentos.com/volatile/x86_64/stone.index -p0 || die "${MSG}"
+    #sudo ${moss} -D "${AOSROOT}" -y repo add volatile https://packages.serpentos.com/volatile/x86_64/stone.index -p0 || die "${MSG}"
+    sudo ${moss} -D "${AOSROOT}" -y repo add volatile https://infratest.aerynos.dev/vessel/volatile/x86_64/stone.index -p0 || die "${MSG}"
 
     MSG="Installing packages..."
     printInfo "${MSG}"
-    sudo ${moss} -D "${SOSROOT}" -y --cache "${BOULDERCACHE}" install "${PACKAGES[@]}" || die "${MSG}"
+    sudo ${moss} -D "${AOSROOT}" -y --cache "${BOULDERCACHE}" install "${PACKAGES[@]}" || die "${MSG}"
 
     MSG="Setting up an empty root password by default..."
     printInfo "${MSG}"
-    sudo chroot "${SOSROOT}" /usr/bin/passwd -d root
+    sudo chroot "${AOSROOT}" /usr/bin/passwd -d root
     sudo rm -vf issue
-    test -f "${SOSROOT}"/etc/issue && cp -v "${SOSROOT}"/etc/issue issue
+    test -f "${AOSROOT}"/etc/issue && cp -v "${AOSROOT}"/etc/issue issue
     echo -e "By default, the root user has no password.\n\nUse the passwd command to change it.\n" >> issue
-    sudo mv -v issue "${SOSROOT}"/etc/issue
+    sudo mv -v issue "${AOSROOT}"/etc/issue
 
     MSG="Preparing local-x86_64 profile directory..."
     printInfo "${MSG}"
-    sudo mkdir -pv "${SOSROOT}/${BOULDERCACHE}/repos/local-x86_64/" || die "${MSG}"
+    sudo mkdir -pv "${AOSROOT}/${BOULDERCACHE}/repos/local-x86_64/" || die "${MSG}"
 
     MSG="Creating a moss stone.index file for the local-x86_64 profile..."
     printInfo "${MSG}"
-    sudo ${moss} -y index "${SOSROOT}/${BOULDERCACHE}/repos/local-x86_64/" || die "${MSG}"
+    sudo ${moss} -y index "${AOSROOT}/${BOULDERCACHE}/repos/local-x86_64/" || die "${MSG}"
 
     MSG="Adding local-x86_64 profile to list of active repositories..."
     printInfo "${MSG}"
-    sudo chroot "${SOSROOT}" moss -y repo add local-x86_64 "file://${BOULDERCACHE}/repos/local-x86_64/stone.index" -p10 || die "${MSG}"
+    sudo chroot "${AOSROOT}" moss -y repo add local-x86_64 "file://${BOULDERCACHE}/repos/local-x86_64/stone.index" -p10 || die "${MSG}"
 }
 
 # clean up env
@@ -132,7 +133,7 @@ cleanEnv () {
     unset BOULDERCACHE
     unset MSG
     unset PACKAGES
-    unset SOSROOT
+    unset AOSROOT
 
     unset BOLD
     unset RED
