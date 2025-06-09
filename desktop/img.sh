@@ -56,7 +56,7 @@ PACKAGE_LIST="gnome_pkglist"
 OUTPUT="aerynos"
 TMPDIR="/tmp"
 
-while getopts 'c:o:p:t:y?' opt
+while getopts 'c:o:p:t:hy?' opt
 do
   case "$opt" in
   c)
@@ -73,6 +73,10 @@ do
         # we're good, carry on
         :
     fi
+    ;;
+  h)
+    usage
+    exit 1
     ;;
   o)
     OUTPUT="$OPTARG"
@@ -231,7 +235,7 @@ build() {
     export MOSS="moss -D ${SFSDIR} --cache ${CACHE}"
 
     echo ">>> Add raw volatile repository to ${SFSDIR}/ ..."
-    time ${MOSS} repo add volatile https://packages.aerynos.dev/volatile/x86_64/stone.index || die_and_cleanup "Adding moss repo failed!"
+    time ${MOSS} repo add volatile https://infratest.aerynos.dev/vessel/volatile/x86_64/stone.index || die_and_cleanup "Adding moss repo failed!"
 
     echo ">>> Install packages to ${SFSDIR}/ ..."
     time ${MOSS} install -y "${PACKAGES[@]}" || die_and_cleanup "Installing packages failed!"
