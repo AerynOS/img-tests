@@ -1,0 +1,37 @@
+# Shared Font List
+font-hack
+font-noto
+font-noto-emoji
+liberation-fonts-ttf
+
+# Kernel and Boot related stuff
+kmod
+linux-desktop
+linux-firmware
+linux-firmware-amd
+linux-firmware-intel
+linux-firmware-iwlwifi
+linux-firmware-nvidia
+lvm2
+plymouth
+zram-generator-defaults
+
+# VM related QoL utilities
+hyperv-daemons
+qemu-guest-agent
+spice-vdagent
+
+# Graphical disk-handling utilities
+binary(gparted)
+dosfstools
+
+# Troubleshooting utilities
+dmidecode
+pciutils
+usbutils
+
+# Browser-related
+firefox
+
+# Installer
+lichen
