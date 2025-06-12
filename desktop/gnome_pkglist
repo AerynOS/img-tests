@@ -1,28 +1,6 @@
-sysbinary(gdm)
-sysbinary(plymouthd)
-gnome-backgrounds
-gnome-desktop-defaults
-font-hack
-font-noto
-font-noto-emoji
-liberation-fonts-ttf
-kmod
-linux-desktop
-linux-firmware
-linux-firmware-amd
-linux-firmware-intel
-linux-firmware-iwlwifi
-linux-firmware-nvidia
-lvm2
-dmidecode
-iproute2
-pciutils
-usbutils
-lichen
-spice-vdagent
+# Desktop Environment Applications
 binary(celluloid)
 binary(file-roller)
-binary(firefox)
 binary(gnome-calculator)
 binary(gnome-calendar)
 binary(gnome-clocks)
@@ -32,7 +10,6 @@ binary(gnome-software)
 binary(gnome-text-editor)
 binary(gnome-tweaks)
 binary(gnome-weather)
-binary(gparted)
 binary(loupe)
 binary(nautilus)
 binary(papers)
@@ -40,3 +17,9 @@ binary(ptyxis)
 binary(resources)
 binary(snapshot)
 binary(starship)
+sysbinary(gdm)
+sysbinary(plymouthd)
+
+# User Experience and Theming
+gnome-backgrounds
+gnome-desktop-defaults
