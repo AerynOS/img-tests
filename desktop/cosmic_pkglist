@@ -1,15 +1,16 @@
 cosmic-applets
-cosmic-desktop
-cosmic-greeter
 cosmic-bg
 cosmic-comp
+cosmic-desktop
 cosmic-edit
 cosmic-files
+cosmic-greeter
 cosmic-icons
 cosmic-launcher
 cosmic-notifications
 cosmic-osd
 cosmic-panel
+cosmic-player
 cosmic-randr
 cosmic-screenshot
 cosmic-session
@@ -19,30 +20,12 @@ cosmic-store
 cosmic-term
 cosmic-wallpapers
 cosmic-workspaces
+
+# User Experience and Theming
 gnome-backgrounds
 os-artwork
+
+# Needed for flatpaks
 xdg-desktop-portal-cosmic
 xdg-desktop-portal-gtk
 
-font-hack
-font-noto
-font-noto-emoji
-firefox
-liberation-fonts-ttf
-
-kmod
-linux-desktop
-linux-firmware
-linux-firmware-amd
-linux-firmware-intel
-linux-firmware-iwlwifi
-linux-firmware-nvidia
-lvm2
-plymouth
-
-dmidecode
-iproute2
-pciutils
-usbutils
-
-lichen

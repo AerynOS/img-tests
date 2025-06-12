@@ -163,13 +163,17 @@ fi
 
 # Pkg list check
 test -f "${WORK}/../pkglist-base" || die "\nThis script MUST be able to find the ../pkglist-base file.\n"
+test -f "${WORK}/desktop-base" || die "\nThis script MUST be able to find the ../desktop-base file.\n"
 test -f "${WORK}/${PACKAGE_LIST}" || die "\nThe specified package list file ${PACKAGE_LIST} does not exist.\n"
 
 # start with a common base of packages
 readarray -t PACKAGES < "${WORK}/../pkglist-base"
 
-# add linux-desktop specific packages
-PACKAGES+=($(cat "${WORK}/${PACKAGE_LIST}"))
+# add the shared desktop baseline of packages (kernels, utilities, VM stuff, fonts etc.)
+PACKAGES+=($(sed -E -e '/^\s*$/d' -e '/^[[:space:]]*#.*$/d' "${WORK}/desktop-base"))
+
+# add Desktop Environment specific packages
+PACKAGES+=($(sed -E -e '/^\s*$/d' -e '/^[[:space:]]*#.*$/d' "${WORK}/${PACKAGE_LIST}"))
 
 test -f ${WORK}/initrdlist || die "\nThis script MUST be run from within the desktop/ dir with the ./initrd file.\n"
 readarray -t initrd < "${WORK}/initrdlist"
