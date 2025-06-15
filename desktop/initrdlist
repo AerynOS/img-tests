@@ -5,6 +5,7 @@ binary(gzip)
 binary(sed)
 binary(strip)
 binary(unsquashfs)
+binary(zstd)
 binary(xargs)
 dracut
 intel-microcode
