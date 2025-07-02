@@ -7,26 +7,16 @@ with no explicit or implied warranty or support.
 
 If you break your computer because you used these scripts or AerynOS in its current state, you get to keep both pieces.
 
-## Create systemd-nspawn compatible `./aosroot` install
+## Build an ISO (can be used as an installer)
 
-    ./create-aosroot.sh
+    just compression=zstd3 build
+    # run 'just help' to see available recipes and options
 
-## Create virt-manager/libvirtd compatible `/var/lib/machines/aosroot/` install
+## Build and boot an ISO (you may need to update the UEFI firmware path)
 
-    DESTDIR="/var/lib/machines/aosroot" ./create-aosroot.sh
+    just firmware="/usr/share/edk2-ovmf/x64/OVMF_CODE.fd" build-and-boot
 
-## Create virtiofs-based virt-manager VM install
-
-    cd virt-manager-vm/
-    ./create-virtio-vm.sh
-
-## Create desktop ISO image
-
-    cd desktop/
-    sudo ./img.sh
-    qemu-system-x86_64 -enable-kvm -cdrom aosvalidator.iso -bios /usr/share/edk2-ovmf/x64/OVMF.fd -m 4096m -serial stdio
-
-## Installable / booting desktop image
+## Manually create an installable / booting desktop image
 
     cd desktop/
     sudo ./img.sh
