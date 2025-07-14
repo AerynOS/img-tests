@@ -1,11 +1,3 @@
-bash-completion
 binary(fastfetch)
-binary(gzip)
-binary(unzip)
-ca-certificates
-coreutils
-pkgset-aeryn-base-desktop
-pkgset-aeryn-gnome-recommended
+pkgset-aeryn-base
 pkgset-aeryn-utilities
-pkgset-aeryn-virtual
-util-linux

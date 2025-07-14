@@ -15,6 +15,7 @@
 # use a default aosroot
 AOSROOT="${DESTDIR:-${PWD}/aosroot}"
 BOULDERCACHE="${HOME}/.cache/boulder"
+CHROOT="sudo systemd-nspawn --as-pid2 --private-users=identity --user=0 --quiet"
 
 # utility functions
 BOLD='\033[1m'
@@ -106,12 +107,22 @@ basicSetup () {
     printInfo "${MSG}"
     sudo ${moss} -D "${AOSROOT}" -y --cache "${BOULDERCACHE}" install "${PACKAGES[@]}" || die "${MSG}"
 
-    MSG="Setting up an empty root password by default..."
+    MSG="Setting up basic environment in ${AOSROOT}/ ..."
     printInfo "${MSG}"
-    sudo chroot "${AOSROOT}" /usr/bin/passwd -d root
+    time ${CHROOT} -D "${AOSROOT}" systemd-firstboot --force --delete-root-password --locale=en_US.UTF-8 --timezone=UTC --root-shell=/usr/bin/bash && echo ">>>>> systemd-firstboot run done."
+
+    MSG="Configuring live user..."
+    printInfo "${MSG}"
+    time ${CHROOT} -D "${AOSROOT}" useradd -c "Live User" -d "/home/live" -G "audio,adm,wheel,render,input,users" -m -U -s "/usr/bin/bash" live
+    sudo cp -Rv ./desktop/rootfs_extra/etc/sudoers.d "${AOSROOT}/etc/"
+    ${CHROOT} -D "${AOSROOT}" chown -R live:live /home/live
+    ${CHROOT} -D "${AOSROOT}" passwd -d live
+
+    MSG="Setting /etc/issue ..."
+    printInfo "${MSG}"
     sudo rm -vf issue
     test -f "${AOSROOT}"/etc/issue && cp -v "${AOSROOT}"/etc/issue issue
-    echo -e "By default, the root user has no password.\n\nUse the passwd command to change it.\n" >> issue
+    echo -e "By default, the live and root users have no passwords.\n\n" >> issue
     sudo mv -v issue "${AOSROOT}"/etc/issue
 
     MSG="Preparing local-x86_64 profile directory..."
@@ -124,7 +135,7 @@ basicSetup () {
 
     MSG="Adding local-x86_64 profile to list of active repositories..."
     printInfo "${MSG}"
-    sudo chroot "${AOSROOT}" moss -y repo add local-x86_64 "file://${BOULDERCACHE}/repos/local-x86_64/stone.index" -p10 || die "${MSG}"
+    sudo chroot ${AOSROOT} moss -y repo add local-x86_64 "file://${BOULDERCACHE}/repos/local-x86_64/stone.index" -p10 || die "${MSG}"
 }
 
 # clean up env
@@ -133,6 +144,7 @@ cleanEnv () {
     unset MSG
     unset PACKAGES
     unset AOSROOT
+    unset CHROOT
 
     unset BOLD
     unset RED
