@@ -1,10 +1,13 @@
+# Shared shell experience
+binary(starship)
+
 # Shared Font List
 font-hack
 font-noto
 font-noto-emoji
 liberation-fonts-ttf
 
-# Kernel and Boot related stuff
+# Shared Kernel and Boot related stuff
 kmod
 linux-desktop
 linux-firmware
@@ -16,18 +19,15 @@ lvm2
 plymouth
 zram-generator-defaults
 
-# VM related QoL utilities
-hyperv-daemons
-qemu-guest-agent
-spice-vdagent
+# Shared VM related QoL utilities
+pkgset-aeryn-virtual
 
-# Graphical disk-handling utilities
+# Shared graphical disk-handling utilities
 binary(gparted)
-dosfstools
+parted
 
-# Troubleshooting utilities
+# Troubleshooting utilities useful in live env
 dmidecode
-pciutils
 usbutils
 
 # Browser-related
@@ -35,3 +35,6 @@ firefox
 
 # Installer
 lichen
+
+# base desktop
+pkgset-aeryn-base-desktop
