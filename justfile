@@ -17,7 +17,7 @@ output := flavor + "-aerynos-" + compression
 memory := "4096m"
 
 # Specify the path to the QEMU firmware file
-firmware := "/usr/share/qemu/edk2-x86_64-code.fd"
+firmware := "/usr/share/edk2/x64/OVMF_CODE.4m.fd"
 
 # Print nice help text with syntax and examples.
 help:
@@ -27,7 +27,7 @@ help:
     @echo 'Examples:'
     @echo '    just build  # will build a quick, lz4 compressed gnome "gnome-aerynos-lz4.iso" by default'
     @echo '    just flavor="gnome" compression="zstd3" output="aerynos-gnome-test" build'
-    @echo '    just output="aerynos-gnome-test" memory="8192m" firmware="/usr/share/edk2-ovmf/x64/OVMF_CODE.fd" boot'
+    @echo '    just output="aerynos-gnome-test" memory="8192m" firmware="/usr/share/edk2-ovmf/x64/OVMF_CODE.4m.fd" boot'
     @echo '    just flavor="cosmic" build-and-boot'
     @just -l
 
