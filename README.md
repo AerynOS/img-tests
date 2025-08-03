@@ -12,9 +12,13 @@ If you break your computer because you used these scripts or AerynOS in its curr
     just compression=zstd3 build
     # run 'just help' to see available recipes and options
 
-## Build and boot an ISO (you may need to update the UEFI firmware path)
+## Build and boot an ISO for quick smoke testing
 
-    just firmware="/usr/share/edk2-ovmf/x64/OVMF_CODE.fd" build-and-boot
+    just compression=zstd3 build-and-boot
+
+If you need to update the firmware path:
+
+    just compression=zstd3 firmware="<some path to OVMF_CODE.fd or OVMF_CODE.4m.fd>" build-and-boot
 
 ## Manually create an installable / booting desktop image
 
