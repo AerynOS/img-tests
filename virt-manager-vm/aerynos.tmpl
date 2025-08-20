@@ -1,5 +1,5 @@
 <domain type="kvm">
-    <name>###SOSNAME###</name>
+    <name>###AOSNAME###</name>
     <metadata>
       <libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
         <libosinfo:os id="http://libosinfo.org/linux/2022"/>
@@ -14,8 +14,8 @@
     <os>
       <type arch="x86_64" machine="q35">hvm</type>
       <loader readonly="yes" type="pflash">###UEFIPAYLOAD###</loader>
-      <kernel>###SOSROOT###/usr/lib/kernel/current.kvm.kernel</kernel>
-      <initrd>###SOSROOT###/usr/lib/kernel/current.kvm.initrd</initrd>
+      <kernel>###AOSROOT###/usr/lib/kernel/current.kvm.kernel</kernel>
+      <initrd>###AOSROOT###/usr/lib/kernel/current.kvm.initrd</initrd>
       <cmdline>rootfstype=virtiofs root=root rw rd.modules-load=virtio_pci rd.shell vconsole.font=ter-v32n video=Virtual-1:1440x900MR</cmdline>
       <boot dev="hd"/>
     </os>
@@ -121,7 +121,7 @@
       </controller>
       <filesystem type="mount" accessmode="passthrough">
         <driver type="virtiofs"/>
-        <source dir="###SOSROOT###"/>
+        <source dir="###AOSROOT###"/>
         <target dir="root"/>
         <address type="pci" domain="0x0000" bus="0x01" slot="0x00" function="0x0"/>
       </filesystem>
