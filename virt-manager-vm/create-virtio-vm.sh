@@ -7,14 +7,14 @@
 
 source ../basic-setup.sh
 
-SOSROOT="${VMDIR:-${PWD}/sosroot}"
-SOSNAME="${VMNAME:-serpent_virtiofs}"
+AOSROOT="${VMDIR:-${PWD}/aosroot}"
+AOSNAME="${VMNAME:-aos_virtiofs}"
 ENABLE_SWAY="${ENABLE_SWAY:-false}"
 
 showStartMessage() {
     cat <<EOF
 
-You can now start the ${SOSNAME} VM via the virt-manager UI!
+You can now start the ${AOSNAME} VM via the virt-manager UI!
 
 ----
 
@@ -24,12 +24,12 @@ EOF
 showHelp() {
     cat <<EOF
 
-If you want to store your machine somewhere else than ${SOSROOT},
+If you want to store your machine somewhere else than ${AOSROOT},
 just call the script with
 
     VMDIR="/some/where/else" ./create-virtio-vm.sh
 
-If you want to name your machine something else than ${SOSNAME},
+If you want to name your machine something else than ${AOSNAME},
 just call the script with 
     
     VMNAME="some_other_name" ./create-virtio-vm.sh
@@ -67,34 +67,35 @@ readarray -t PACKAGES < ../pkglist-base
 PACKAGES+=($(cat ./pkglist))
 
 if [ "${ENABLE_SWAY}" = "true" ]; then
-    PACKAGES+=("sway")
+    PACKAGES+=("pkgset-aeryn-sway-minimal")
+    PACKAGES+=("pkgset-aeryn-base-desktop")
 fi
 
 basicSetup
 
 MSG="Removing previous VM configuration..."
 printInfo "${MSG}"
-if sudo virsh desc "${SOSNAME}" &> /dev/null; then
-    sudo virsh destroy "${SOSNAME}" || true
-    sudo virsh undefine "${SOSNAME}" --keep-nvram || die "'virsh undefine serpent' failed, exiting."
+if sudo virsh desc "${AOSNAME}" &> /dev/null; then
+    sudo virsh destroy "${AOSNAME}" || true
+    sudo virsh undefine "${AOSNAME}" --keep-nvram || die "'virsh undefine aos' failed, exiting."
 fi
 
-MSG="Setting up virt-mananger ${SOSNAME} instance from template..."
+MSG="Setting up virt-mananger ${AOSNAME} instance from template..."
 printInfo "${MSG}"
 # In some cases, this will find more than one entry
-FOUNDPAYLOADS=($(find /usr/share -name OVMF_CODE.fd))
+FOUNDPAYLOADS=($(find /usr/share -name 'OVMF_CODE.*fd' |grep -v secure))
 # ... if so, just pick the first one
 FOUNDPAYLOAD=${FOUNDPAYLOADS[0]}
 # Defaults to the location in Solus
 UEFIPAYLOAD="${FOUNDPAYLOAD:-/usr/share/edk2-ovmf/x64/OVMF_CODE.fd}"
 MSG="Found \$UEFIPAYLOAD: ${UEFIPAYLOAD}..."
 printInfo "${MSG}"
-sed -e "s|###SOSNAME###|${SOSNAME}|g" \
-    -e "s|###SOSROOT###|${SOSROOT}|g" \
+sed -e "s|###AOSNAME###|${AOSNAME}|g" \
+    -e "s|###AOSROOT###|${AOSROOT}|g" \
     -e "s|###UEFIPAYLOAD###|${UEFIPAYLOAD}|g" \
-    serpentos.tmpl > serpentos.xml
+    aerynos.tmpl > aerynos.xml
 
-virsh -c qemu:///system define serpentos.xml
+virsh -c qemu:///system define aerynos.xml
 
 showStartMessage
 showHelp
