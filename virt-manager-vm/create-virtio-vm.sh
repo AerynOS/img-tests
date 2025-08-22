@@ -64,9 +64,9 @@ command -v virt-manager || die "\n${0} assumes that virt-manager is installed.\n
 # start with a common base of packages
 readarray -t PACKAGES < ../pkglist-base
 # add linux-kvm specific packages
-PACKAGES+=($(cat ./pkglist))
+PACKAGES+=($(cat ./pkglist-kvm))
 
-if [ "${ENABLE_SWAY}" = "true" ]; then
+if [[ "${ENABLE_SWAY}" = "true" ]]; then
     PACKAGES+=("pkgset-aeryn-sway-minimal")
     PACKAGES+=("pkgset-aeryn-base-desktop")
 fi
