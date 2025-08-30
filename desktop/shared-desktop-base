@@ -17,6 +17,7 @@ linux-firmware-iwlwifi
 linux-firmware-nvidia
 lvm2
 plymouth
+sof-firmware
 zram-generator-defaults
 
 # Shared VM related QoL utilities
