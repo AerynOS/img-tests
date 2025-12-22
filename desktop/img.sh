@@ -276,6 +276,9 @@ build() {
             --add-drivers "amdgpu hyperv_drm i915 nouveau qxl radeon simpledrm vboxvideo virtio-gpu vmwgfx xe"
     mv -v "${SFSDIR}/initrd" "${BOOT}/initrd"
 
+    echo ">>> Generate name-version-release file for use by e.g. distrowatch..."
+    time ${MOSS} li |gawk '{print $1 " " $2}' |sort -h > "${OUTPUT}.iso.nvr"
+
     echo ">>> Roll back and prune to keep only initially installed state and remove downloads ..."
     time ${MOSS} state activate 1 -y || die_and_cleanup "Failed to activate initial state in ${TMPFS}/ !"
     time ${MOSS} state prune -k 1 --include-newer -y || die_and_cleanup "Failed to prune moss state in ${TMPFS}/ !"
