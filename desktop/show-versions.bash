@@ -23,19 +23,28 @@ wl_compositors=(
     mangowc
     niri
     sway
+    weston
 )
 wl_components=(
     '\nWayland_components:\n'
+    awww
     dankmaterialshell
     eiipm
     ewwii
     greetd
+    grim
     ironbar
     lucien
     riftbar
+    slurp
     waybar
+    wev
     wl-clipboard-rs
+    wlroots
+    wlsunset
+    wmenu
     xwayland-satellite
+    xwaylandvideobridge
 )
 terminal_emulators=(
     '\nTerminal_emulators:\n'
