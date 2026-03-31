@@ -20,7 +20,7 @@ desktops=(
 )
 wl_compositors=(
     '\nWayland_compositors:\n'
-    mangowc
+    mangowm
     niri
     sway
     weston
