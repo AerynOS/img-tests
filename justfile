@@ -35,6 +35,10 @@ help:
 build:
     cd {{target}} && sudo {{img_script}} -c {{compression}} -o {{output}} -p {{flavor}}_pkglist
 
+# Boot the specified ISO using QEMU with the specified settings using BIOS firmware
+biosboot:
+    qemu-system-x86_64 -enable-kvm -m {{memory}} -cdrom {{target}}/{{output}}.iso -device virtio-vga-gl,xres=1920,yres=1080 -display sdl,gl=on,show-cursor=off -cpu host
+
 # Boot the specified ISO using QEMU with the specified settings
 boot:
     qemu-system-x86_64 -enable-kvm -m {{memory}} -cdrom {{target}}/{{output}}.iso -drive if=pflash,format=raw,readonly=on,file={{firmware}} -device virtio-vga-gl,xres=1920,yres=1080 -display sdl,gl=on,show-cursor=off -cpu host
