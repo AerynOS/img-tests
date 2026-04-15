@@ -130,6 +130,19 @@ WORK="$(dirname $(realpath $0))"
 echo ">>> workdir \${WORK}: ${WORK}"
 TMPFS="${TMPDIR}/aerynos_iso"
 echo ">>> tmpfs dir \${TMPFS}: ${TMPFS}"
+ISOLINUX_ASSET_DIR="${WORK}/../iso_assets"
+ISOLINUX_CFG="${WORK}/isolinux.cfg"
+ISOLINUX_BACKGROUND="${WORK}/biosbackgroundfinal2-1024x768.png"
+ISOLINUX_FILES=(
+    isolinux.bin
+    ldlinux.c32
+    vesamenu.c32
+    libcom32.c32
+    libutil.c32
+    libmenu.c32
+    libgpl.c32
+    reboot.c32
+)
 
 BINARIES=(
     fallocate
@@ -165,6 +178,11 @@ fi
 test -f "${WORK}/../pkglist-base" || die "\nThis script MUST be able to find the ../pkglist-base file.\n"
 test -f "${WORK}/shared-desktop-base" || die "\nThis script MUST be able to find the ./shared-desktop-base file.\n"
 test -f "${WORK}/${PACKAGE_LIST}" || die "\nThe specified package list file ${PACKAGE_LIST} does not exist.\n"
+test -f "${ISOLINUX_CFG}" || die "\nThis script MUST be able to find the ./isolinux.cfg file.\n"
+test -f "${ISOLINUX_BACKGROUND}" || die "\nMissing BIOS background asset ${ISOLINUX_BACKGROUND}.\n"
+for f in "${ISOLINUX_FILES[@]}"; do
+    test -f "${ISOLINUX_ASSET_DIR}/${f}" || die "\nMissing ${ISOLINUX_ASSET_DIR}/${f}.\n"
+done
 
 # start with a common base of packages
 readarray -t PACKAGES < "${WORK}/../pkglist-base"
@@ -239,7 +257,7 @@ build() {
     export MOSS="moss -D ${SFSDIR} --cache ${CACHE}"
 
     echo ">>> Add volatile AerynOS repository to ${SFSDIR}/ ..."
-    time ${MOSS} repo add volatile https://build.aerynos.dev/volatile/x86_64/stone.index || die_and_cleanup "Adding moss repo failed!"
+    time ${MOSS} repo add volatile https://build.aerynos.dev/stream/volatile/x86_64/stone.index || die_and_cleanup "Adding moss repo failed!"
 
     #echo ">>> Add local repo to ${SFSDIR}/ ..."
     #time ${MOSS} repo add local file:///home/ermo/.cache/local_repo/x86_64/stone.index -p10 || die_and_cleanup "Adding moss repo failed!"
@@ -320,9 +338,13 @@ build() {
     mkdir -pv "${TMPFS}/root/EFI/Boot"
     cp -v "${TMPFS}/efi.img" "${TMPFS}/root/EFI/Boot/efiboot.img"
 
-    echo ">>> Copy the isolinux bootloader..."
+    echo ">>> Copy the isolinux bootloader and BIOS warning assets..."
     mkdir -pv "${TMPFS}/root/isolinux/"
-    cp -v "${WORK}/../iso_assets/isolinux.bin" "${TMPFS}/root/isolinux/."
+    for f in "${ISOLINUX_FILES[@]}"; do
+        cp -v "${ISOLINUX_ASSET_DIR}/${f}" "${TMPFS}/root/isolinux/."
+    done
+    cp -v "${ISOLINUX_CFG}" "${TMPFS}/root/isolinux/isolinux.cfg"
+    cp -v "${ISOLINUX_BACKGROUND}" "${TMPFS}/root/isolinux/."
 
     echo ">>> Create the ISO file..."
     xorriso -as mkisofs \

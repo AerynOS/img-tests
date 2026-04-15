@@ -28,3 +28,14 @@ If you need to update the firmware path:
     qemu-system-x86_64 -enable-kvm -m 4096m -cdrom aosvalidator.iso -drive if=pflash,format=raw,readonly=on,file=/usr/share/qemu/edk2-x86_64-code.fd -device virtio-vga-gl -display sdl,gl=on -cpu host -serial stdio -device virtio-blk-pci,drive=main -drive id=main,if=none,file=disk.img,format=raw -boot c
 
 Drop the `-boot c` after you've booted the VM, formatted with `fdisk` and installed with `sudo lichen`
+
+# Credits 
+
+The boot splash image/theme used in this project is based on:
+CRT Amber GRUB Theme by Jacksaur
+https://github.com/Jacksaur/CRT-Amber-GRUB-Theme
+
+Which is itself inspired by:
+Fallout 4 terminal-style artwork
+https://www.nexusmods.com/fallout4/images/170842
+
