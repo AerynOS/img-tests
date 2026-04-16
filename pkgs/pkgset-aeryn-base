@@ -1,0 +1,42 @@
+# AerynOS base package set
+# Core system packages - minimum required for WSL
+
+# Base system packages
+pkgset-aeryn-base
+
+# Package manager
+binary(package-manager)
+
+# Shell
+binary(bash)
+binary(dash)
+
+# Text processing
+binary(sed)
+binary(grep)
+binary(awk)
+binary(diff)
+binary(tar)
+binary(cpio)
+
+# Core utilities
+binary(coreutils)
+binary(baseenv)
+binary(os-release)
+binary(findmnt)
+binary(logname)
+binary(uptime)
+binary(nice)
+binary(groupmems)
+binary(slocate)
+binary(uptime)
+binary(who)
+binary(pathname)
+binary(sleep)
+binary(nohup)
+binary(destopconf)
+binary(factor)
+binary(comm)
+binary(pr)
+binary(cpu)
+binary(watch)
