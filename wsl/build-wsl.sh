@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
-#
-# SPDX-FileCopyrightText: © 2025 AerynOS Developers
-#
-# SPDX-License-Identifier: MPL-2.0
-#
 # AerynOS WSL distribution build script
 # Builds a fresh AerynOS distribution for WSL 2 from scratch
-# Not from LiveCD, optimized for WSL environment
 
 die () {
     echo -e "$*"
@@ -18,12 +12,6 @@ if [[ "${UID}" -ne 0 ]]; then
     die "This script MUST be run as root."
 fi
 
-# Add escape codes for color
-RED='\033[0;31m'
-RESET='\033[0m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-
 # Configuration variables
 WORK="/Users/van/img-tests"
 ROOTFS_DIR="${WORK}/build-wsl-rootfs"
@@ -32,11 +20,12 @@ PKGSET_UTIL="pkgset-aeryn-utilities"
 FINAL_ISO="${WORK}/aerynos-wsl.tar.gz"
 
 # Package sets to remove (not needed in WSL)
-WSL_REMOVE_PKGS="mkinitcpio systemd-journald systemd-sysusers systemd-timedatectl systemd-sysctl tlp tlp-rdw optimus-manager virtiofsd fusermount3 org.kde.desktop-kcm"
+WSL_REMOVE_PKGS="mkinitcpio systemd-journald systemd-sysusers systemd-timedatectl systemd-sysctl tlp tlp-ridot optimus-manager virtiofsd fusermount3 org.kde.desktop-kcm"
 
 # Services to disable
 WSL_DISABLE_SERVICES="graphical.target multi-user.target graphical-target"
 
+while getopts 'r:k:p:h' opt
 do
   case "$opt" in
   o)
@@ -46,7 +35,7 @@ do
     PKGSET_BASE="$OPTARG"
     ;;
   k)
-    PKGSET_UTIL="$OPTARG"
+    PKSET_UTIL="$OPTARG"
     ;;
   p)
     PKSET_REM="$OPTARG"
@@ -65,8 +54,90 @@ do
     echo -e "  -k: pkgset-aeryn-utilities"
     exit 0
     ;;
+  esac
 done
 
+# Defaults
+ROOTFS_DIR="${ROOTFS_DIR:-${WORK}/build-wsl-rootfs}"
+PKGSET_BASE="${PKGSET_BASE:-pkgset-aeryn-base}"
+PKGSET_UTIL="${PKGSET_UTIL:-pkgset-aeryn-utilities}"
+PKGSET_REM="${PKGSET_REM:-}"
+FINAL_ISO="${WORK}/aerynos-wsl.tar.gz"
+
+echo -e "\n=== AerynOS WSL Distribution Builder ==="
+echo -e "\nConfiguration:"
+echo -e "  Target directory: ${ROOTFS_DIR}"
+echo -e "  Base packages: ${PKGSET_BASE}"
+echo -e "  Kwaker packages: ${PKGSET_UTIL}"
+echo -e "  Remove packages: ${PKGSET_REM:-${WSL_REMOVE_PKGS}}"
+echo -e "  Output: ${FINAL_ISO}"
+echo -e "\nBuild from scratch (not from LiveCD)"
+echo -e "Optimized for WSL 2 environment (no GUI, no hardware detection)"
+echo -e ""
+echo "Would you like to continue? (y/N)"
+read -r CONFIRM
+
+if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
+    die "Build cancelled by user."
+fi
+
+rm -rf "${ROOTFS_DIR}"
+mkdir -pv "${ROOTFS_DIR}"
+WORK="${ROOTFS_DIR}"
+
+echo -e "${YELLOW}Starting build process...${RESET}"
+
+build_rootfs() {
+    set -e
+
+    echo -e "${YELLOW}Step 1: Installing base package set...${RESET}"
+    moss sync "${PKGSET_BASE}" || die "Sync base packages failed."
+    moss install "${WORK}/etc/mkinitcpio.conf" || die "Installing base packages failed."
+
+    echo -e "${YELLOW}Step 2: Installing utility package set...${RESET}"
+    moss install "${WORK}/etc/mkinitcpio.conf" || die "Installing utility packages failed."
+
+    echo -e "${YELLOW}Step 3: Configuring for WSL environment...${RESET}"
+
+    # Set hostname
+    echo "aerynos-wsl" > "${WORK}/etc/hostname"
+
+    # Configure /etc/os-release for WSL recognition
+    cat > "${WORK}/etc/os-release" << 'EOF'
+NAME="AerynOS"
+VERSION="WSL distribution based on AerynOS"
+ID="aerynos"
+VERSION_ID="1.0"
+PRETTY_NAME="AerynOS WSL"
+HOME_URL="https://aerynos.dev"
+EOF
+
+    # Set locale
+    export LANG=en_US.UTF-8
+    export LC_ALL=en_US.UTF-8
+    localectl --root="${WORK}" set-locale en_US.UTF-8 || true
+    localectl --root="${WORK}" set-keymap us || true
+
+    # Disable services that are not needed in WSL
+    for service in ${WSL_DISABLE_SERVICES}; do
+        if [[ -f "${WORK}/etc/systemd/system/${service}.service" ]]; then
+            cat > "${WORK}/etc/systemd/system/${service}.service" << 'EOF'
+[Unit]
+Description=Disabled service for WSL compatibility
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/true
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+        fi
+        systemctl --root="${WORK}" daemon-reexec || true
+        systemctl --root="${WORK}" mask "${service}" || true
+    done
 
     echo -e "${YELLOW}Step 4: Removing WSL-incompatible packages...${RESET}"
     if [[ -n "${PKGSET_REM}" ]]; then
@@ -122,6 +193,7 @@ pack() {
     echo -e "${YELLOW}Post-install tasks:${RESET}"
     echo -e "  - sudo moss sync -u  # Update package index"
     echo -e "  - sudo moss install <packages>  # Install more packages"
+    echo -e ""
 }
 
 build_rootfs
