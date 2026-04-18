@@ -12,8 +12,13 @@ if [[ "${UID}" -ne 0 ]]; then
     die "This script MUST be run as root."
 fi
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# WORK is the parent directory of the script (img-tests)
+WORK="$(dirname "$SCRIPT_DIR")"
+
 # Configuration variables
-WORK="/Users/van/img-tests"
 ROOTFS_DIR="${WORK}/build-wsl-rootfs"
 PKGSET_BASE="pkgset-aeryn-base"
 PKGSET_UTIL="pkgset-aeryn-utilities"
@@ -83,7 +88,7 @@ fi
 
 rm -rf "${ROOTFS_DIR}"
 mkdir -pv "${ROOTFS_DIR}"
-WORK="${ROOTFS_DIR}"
+
 
 echo -e "${YELLOW}Starting build process...${RESET}"
 
@@ -147,7 +152,7 @@ EOF
 
     echo -e "${YELLOW}Step 5: Creating WSL-required directories...${RESET}"
     mkdir -p "${WORK}/dev" "${WORK}/proc" "${WORK}/sys" "${WORK}/run"
-    
+
     # Create minimal device files
     makedevs || die "Creating device files failed."
 
