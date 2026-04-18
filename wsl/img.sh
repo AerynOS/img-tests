@@ -12,6 +12,15 @@ if [[ "${UID}" -ne 0 ]]; then
     die "\nThis script MUST be run as root.\n"
 fi
 
+# If it is root, try to inherit the original user's PATH and HOME
+if [ "$EUID" -eq 0 ] && [ -n "$SUDO_USER" ]; then
+    export HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+    export PATH="/home/$SUDO_USER/.local/bin:/home/$SUDO_USER/.cargo/bin:$PATH"
+fi
+
+echo "PATH in script: $PATH"
+echo "User: $(whoami): $HOME"
+
 # Add escape codes for color
 RED='\033[0;31m'
 RESET='\033[0m'
@@ -19,7 +28,7 @@ RESET='\033[0m'
 declare -A COMPRESSION_ARGS
 COMPRESSION_ARGS["gzip"]="gzip"
 # The default because it's fast and it's easy to spot regressions in size
-# COMPRESSION_ARGS["lz4"]="lz4"
+#COMPRESSION_ARGS["lz4"]="lz4"
 # yields 10% extra compression
 # COMPRESSION_ARGS["lz4hc"]="lz4 -Xhc"
 # Almost as quick as lz4 and a fair bit smaller
@@ -37,10 +46,9 @@ function print_valid_compression_types() {
 }
 
 function usage() {
-    echo -e "\nUsage: sudo ./img.sh -c <compression type> -o <output>.tar.gz -p <package list> -t <tmpdir> -y\n"
+    echo -e "\nUsage: sudo ./img.sh -o <output>.tar.gz -p <package list> -t <tmpdir> -y\n"
     print_valid_compression_types
-    echo -e "\nThe default compression type is lz4 (quick, easy to spot size regressions)."
-    echo -e "-- The best tradeoff between size and speed is zstd3."
+    echo -e "\nThe default compression type is gzip (supported by WSL)."
     echo -e "\nThe default output is 'aerynos_wsl' (becomes 'aerynos_wsl.tar.gz')."
     echo -e "\nThe default package list is the file 'minimal_pkglist'."
     echo -e "\nThe default tmp dir is '/tmp' (on some distros, /var/tmp must be used due to permissions)."
@@ -121,31 +129,15 @@ do
 done
 
 # Let the user set the COMPRESSION variable and document supported compressors in the README
-COMPRESSOR="${COMPRESSION:-gzip}"
+COMPRESSOR="gzip"
 
 WORK="$(dirname $(realpath $0))"
 echo ">>> workdir \${WORK}: ${WORK}"
 TMPFS="${TMPDIR}/aerynos_fs"
 echo ">>> tmpfs dir \${TMPFS}: ${TMPFS}"
-# ISOLINUX_ASSET_DIR="${WORK}/../iso_assets"
-# ISOLINUX_CFG="${WORK}/isolinux.cfg"
-# ISOLINUX_BACKGROUND="${WORK}/biosbackgroundfinal2-1024x768.png"
-# ISOLINUX_FILES=(
-#     isolinux.bin
-#     ldlinux.c32
-#     vesamenu.c32
-#     libcom32.c32
-#     libutil.c32
-#     libmenu.c32
-#     libgpl.c32
-#     reboot.c32
-# )
 
 BINARIES=(
-    fallocate
-    mkfs.vfat
     moss
-    sync
     systemd-nspawn
 )
 # up front check for necessary binaries
@@ -170,25 +162,13 @@ fi
 
 # Pkg list check
 test -f "${WORK}/../pkglist-base" || die "\nThis script MUST be able to find the ../pkglist-base file.\n"
-# test -f "${WORK}/shared-desktop-base" || die "\nThis script MUST be able to find the ./shared-desktop-base file.\n"
 test -f "${WORK}/${PACKAGE_LIST}" || die "\nThe specified package list file ${PACKAGE_LIST} does not exist.\n"
-# test -f "${ISOLINUX_CFG}" || die "\nThis script MUST be able to find the ./isolinux.cfg file.\n"
-# test -f "${ISOLINUX_BACKGROUND}" || die "\nMissing BIOS background asset ${ISOLINUX_BACKGROUND}.\n"
-# for f in "${ISOLINUX_FILES[@]}"; do
-#    test -f "${ISOLINUX_ASSET_DIR}/${f}" || die "\nMissing ${ISOLINUX_ASSET_DIR}/${f}.\n"
-# done
 
 # start with a common base of packages
 readarray -t PACKAGES < "${WORK}/../pkglist-base"
 
-# add the shared desktop baseline of packages (kernels, utilities, VM stuff, fonts etc.)
-PACKAGES+=($(sed -E -e '/^\s*$/d' -e '/^[[:space:]]*#.*$/d' "${WORK}/shared-desktop-base"))
-
-# add Desktop Environment specific packages
+# add specific packages
 PACKAGES+=($(sed -E -e '/^\s*$/d' -e '/^[[:space:]]*#.*$/d' "${WORK}/${PACKAGE_LIST}"))
-
-# test -f ${WORK}/initrdlist || die "\nThis script MUST be run from within the desktop/ dir with the ./initrd file.\n"
-# readarray -t initrd < "${WORK}/initrdlist"
 
 cleanup () {
     if [[ -z "${TMPFS}" || "${TMPFS}" == "" ]]; then
@@ -262,37 +242,8 @@ build() {
     echo ">>> Set up basic environment in ${SFSDIR}/ ..."
     time ${CHROOT} -D "${SFSDIR}" systemd-firstboot --force --delete-root-password --locale=en_US.UTF-8 --timezone=UTC --root-shell=/usr/bin/bash && echo ">>>>> systemd-firstboot run done."
 
-    # echo ">>> Configuring live user."
-    # time ${CHROOT} -D "${SFSDIR}" useradd -c "live User" -d "/home/live" -G "audio,adm,wheel,render,input,users" -m -U -s "/usr/bin/bash" live
-    # cp -R ${WORK}/rootfs_extra/etc/* "${SFSDIR}/etc/."
-    # chown -R root:root "${SFSDIR}/etc"
-    # ${CHROOT} -D "${SFSDIR}" chown -R live:live /home/live
-    # ${CHROOT} -D "${SFSDIR}" passwd -d live
-
-    # echo ">>> Forcibly refreshing flatpak."
-    # time ${CHROOT} -D "${SFSDIR}" flatpak update --system --appstream --no-deps --no-related -v
-
-    # echo ">>> Extract assets..."
-    # cp -av "${SFSDIR}/usr/lib/systemd/boot/efi/systemd-bootx64.efi" "${BOOT}/bootx64.efi"
-    # cp -av "${SFSDIR}"/usr/lib/kernel/*/vmlinuz "${BOOT}/kernel"
-
-    # echo ">>> Install dracut in ${SFSDIR}/ ..."
-    # time ${MOSS} install "${initrd[@]}" -y || die_and_cleanup "Failed to install initrd packages!"
-
-    # echo ">>> Regenerate dracut..."
-    # kver=$(ls "${SFSDIR}/usr/lib/modules")
-    # time ${CHROOT} -D "${SFSDIR}/" \
-    #     dracut --early-microcode --hardlink -N --nomdadmconf --nolvmconf \
-    #         --kver ${kver} --add "bash dash systemd lvm dm dmsquash-live plymouth" \
-    #         --fwdir /usr/lib/firmware --tmpdir /tmp --zstd --strip /initrd -v \
-    #         --add-drivers "amdgpu hyperv_drm i915 nouveau qxl radeon simpledrm vboxvideo virtio-gpu vmwgfx xe"
-    # mv -v "${SFSDIR}/initrd" "${BOOT}/initrd"
-
-    # echo ">>> Generate name-version-release file for use by e.g. distrowatch..."
-    # time ${MOSS} li |gawk '{print $1 " " $2}' |sort -h > "${OUTPUT}.iso.nvr"
-
     echo ">>> Roll back and prune to keep only initially installed state and remove downloads ..."
-    time ${MOSS} state activate 1 -y || die_and_cleanup "Failed to activate initial state in ${TMPFS}/ !"
+#    time ${MOSS} state activate 1 -y || die_and_cleanup "Failed to activate initial state in ${TMPFS}/ !"
     time ${MOSS} state prune -k 1 --include-newer -y || die_and_cleanup "Failed to prune moss state in ${TMPFS}/ !"
 
     # Remove downloaded .stones to lower size of generated ISO
@@ -301,66 +252,13 @@ build() {
     SFSSIZE=$(du -BMiB -s ${TMPFS}|cut -f1|sed -e 's|MiB||g')
     echo ">>> ${SFSDIR} size: ${SFSSIZE} MiB"
 
-    # echo ">>> Generate the LiveOS image structure..."
-    # mkdir -pv "${TMPFS}/root/LiveOS/"
+    cp -R ${WORK}/osroot/* "${SFSDIR}/."
 
     # Show the contents that will get included to satisfy ourselves that the source dirs specified below are sufficient
     ls -la "${SFSDIR}/"
 
     # Compress with gzip for WSL
-    tar -czf "${OUTPUT}.tar.gz" .
-
-    # echo ">>> Compress the LiveOS squashfs.img using the ${COMPRESSOR} compression preset..."
-    # time mksquashfs "${SFSDIR}"/* "${SFSDIR}/.moss" "${TMPFS}/root/LiveOS/squashfs.img" \
-    #   -root-becomes LiveOS -keep-as-directory -b 1M -progress -comp ${COMPRESSION_ARGS[$COMPRESSOR]}
-
-    # echo ">>> Create and mount the efi.img backing file..."
-    # EFI_SIZE=$(du -c "${BOOT}/bootx64.efi" "${BOOT}/kernel" "${BOOT}/initrd" "${WORK}/live-os.conf" | grep total | awk '{print $1}')
-    # EFI_SIZE=$((EFI_SIZE + 1024)) # Add some buffer space
-    # fallocate -l ${EFI_SIZE}K "${TMPFS}/efi.img"
-    # mkfs.vfat -F 12 "${TMPFS}/efi.img" -n EFIBOOTISO
-    # mount -vo loop "${TMPFS}/efi.img" "${MOUNT}"
-
-    # echo ">>> Set up EFI image..."
-    # mkdir -pv "${MOUNT}/EFI/Boot/"
-    # cp -v "${BOOT}/bootx64.efi" "${MOUNT}/EFI/Boot/bootx64.efi"
-    # sync
-    # mkdir -pv "${MOUNT}/loader/entries/"
-    # cp -v "${WORK}/live-os.conf" "${MOUNT}/loader/entries/"
-    # cp -v "${BOOT}/kernel" "${MOUNT}/"
-    # cp -v "${BOOT}/initrd" "${MOUNT}/"
-    # umount -Rlv "${MOUNT}"
-
-    # echo ">>> Put the new EFI image in the correct place..."
-    # mkdir -pv "${TMPFS}/root/EFI/Boot"
-    # cp -v "${TMPFS}/efi.img" "${TMPFS}/root/EFI/Boot/efiboot.img"
-
-    # echo ">>> Copy the isolinux bootloader and BIOS warning assets..."
-    # mkdir -pv "${TMPFS}/root/isolinux/"
-    # for f in "${ISOLINUX_FILES[@]}"; do
-    #     cp -v "${ISOLINUX_ASSET_DIR}/${f}" "${TMPFS}/root/isolinux/."
-    # done
-    # cp -v "${ISOLINUX_CFG}" "${TMPFS}/root/isolinux/isolinux.cfg"
-    # cp -v "${ISOLINUX_BACKGROUND}" "${TMPFS}/root/isolinux/."
-
-    # echo ">>> Create the ISO file..."
-    # xorriso -as mkisofs \
-    #     -o "${WORK}/${OUTPUT}.iso" \
-    #     -R -J -v -d -N \
-    #     -x "${OUTPUT}.iso" \
-    #     -hide-rr-moved \
-    #     -isohybrid-mbr ${WORK}/../iso_assets/isohdpfx.bin \
-    #     -b isolinux/isolinux.bin \
-    #     -c isolinux/boot.cat \
-    #     -boot-load-size 4 \
-    #     -boot-info-table \
-    #     -no-emul-boot \
-    #     -eltorito-alt-boot \
-    #     -e EFI/Boot/efiboot.img \
-    #     -no-emul-boot \
-    #     -isohybrid-gpt-basdat \
-    #     -V "AERYNOSLIVE" -A "AERYNOSLIVE" \
-    #     "${TMPFS}/root"
+    tar -czf "${OUTPUT}.tar.gz" -C "${SFSDIR}" .
 
     # The gnarly sed operation is here because the uutils-coreutils `ls` does not output the unit next to the size
     echo "Successfully built $(ls -s --block-size=M ${OUTPUT}.tar.gz | sed 's|\([[:digit:]]+*\) \(.*\)$|\1M \2|g') using ${COMPRESSOR} compression."
@@ -394,7 +292,7 @@ ask_to_continue () {
     echo -e "\nGenerating AerynOS linux-desktop ISO image using:\n"
     echo -e "- compression : ${COMPRESSOR}"
     echo -e "- package list: ${PACKAGE_LIST}"
-    echo -e "- output name : ${OUTPUT}.iso"
+    echo -e "- output name : ${OUTPUT}.tar.gz"
     echo -e "- tmp dir     : ${TMPDIR}"
 
     if [[ "${ASK}" == "yes" ]]; then

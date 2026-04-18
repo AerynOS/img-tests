@@ -19,12 +19,12 @@ while true; do
   read -p 'Enter new UNIX username: ' username
 
   # Create the user
-  if /usr/sbin/adduser --uid "$DEFAULT_UID" --quiet --gecos ''  "$username"; then
+  if /usr/sbin/useradd --uid "$DEFAULT_UID" -c '' "$username"; then
 
     if /usr/sbin/usermod "$username" -aG "$DEFAULT_GROUPS"; then
       break
     else
-      /usr/sbin/deluser "$username"
+      /usr/sbin/userdel "$username"
     fi
   fi
 done
