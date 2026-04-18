@@ -4,7 +4,6 @@ To create and distribute follow this guide
 https://learn.microsoft.com/en-us/windows/wsl/build-custom-distro
 
 ## Files
-- guide.md    :guide for convert AerynOS Live iso to rootfs for wsl
 - readme.md   :this file
 - osroot      :files need for wsl
 
