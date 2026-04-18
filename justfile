@@ -46,6 +46,10 @@ boot:
 # Build a flavor iso using compression type and then boot it using QEMU with specified firmware
 build-and-boot: build boot
 
+# Build release For WSL (Windows subsystem for linux)
+build-wsl:
+    cd wsl && {{img_script}} -c gzip -o aerynos_wsl -p minimal_pkglist
+
 # Build release ISOs for the GNOME and COSMIC flavours
 release:
     just build flavor="gnome" compression="zstd3"
