@@ -13,7 +13,7 @@ if [[ "${UID}" -ne 0 ]]; then
 fi
 
 # If it is root, try to inherit the original user's PATH and HOME
-if [ "$EUID" -eq 0 ] && [ -n "$SUDO_USER" ]; then
+if [[ "$EUID" -eq 0  &&  -n "$SUDO_USER" ]]; then
     export HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
     export PATH="/home/$SUDO_USER/.local/bin:/home/$SUDO_USER/.cargo/bin:$PATH"
 fi
@@ -52,7 +52,7 @@ function usage() {
     echo -e "\nThe default output is 'aerynos_wsl' (becomes 'aerynos_wsl.tar.gz')."
     echo -e "\nThe default package list is the file 'minimal_pkglist'."
     echo -e "\nThe default tmp dir is '/tmp' (on some distros, /var/tmp must be used due to permissions)."
-    echo -e "\nTip: Adding '-y' specifies that you do not want to be prompted to continue generating the iso."
+    echo -e "\nTip: Adding '-y' specifies that you do not want to be prompted to continue generating the tar.gz."
 }
 
 # defaults
