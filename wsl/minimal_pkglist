@@ -2,3 +2,6 @@ starship
 git
 vim
 btop
+bind-utils
+coreutils
+inetutils
