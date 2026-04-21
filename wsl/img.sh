@@ -58,7 +58,7 @@ function usage() {
 # defaults
 ASK="yes"
 PACKAGE_LIST="minimal_pkglist"
-OUTPUT="aerynos_wsl"
+OUTPUT="aerynos"
 TMPDIR="/tmp"
 
 while getopts 'c:o:p:t:hy?' opt
@@ -242,6 +242,11 @@ build() {
     echo ">>> Set up basic environment in ${SFSDIR}/ ..."
     time ${CHROOT} -D "${SFSDIR}" systemd-firstboot --force --delete-root-password --locale=en_US.UTF-8 --timezone=UTC --root-shell=/usr/bin/bash && echo ">>>>> systemd-firstboot run done."
 
+    mkdir "${SFSDIR}/home"
+    chown -R root:root "${SFSDIR}/home"
+    cp -R ${WORK}/osroot/* "${SFSDIR}/."
+    chown -R root:root "${SFSDIR}/etc"
+
     echo ">>> Roll back and prune to keep only initially installed state and remove downloads ..."
 #    time ${MOSS} state activate 1 -y || die_and_cleanup "Failed to activate initial state in ${TMPFS}/ !"
     time ${MOSS} state prune -k 1 --include-newer -y || die_and_cleanup "Failed to prune moss state in ${TMPFS}/ !"
@@ -252,21 +257,25 @@ build() {
     SFSSIZE=$(du -BMiB -s ${TMPFS}|cut -f1|sed -e 's|MiB||g')
     echo ">>> ${SFSDIR} size: ${SFSSIZE} MiB"
 
-    cp -R ${WORK}/osroot/* "${SFSDIR}/."
-
     # Show the contents that will get included to satisfy ourselves that the source dirs specified below are sufficient
     ls -la "${SFSDIR}/"
 
     # Compress with gzip for WSL
     tar -czf "${OUTPUT}.tar.gz" -C "${SFSDIR}" .
 
+    # create .wsl as well
+    cp "${OUTPUT}.tar.gz" "${OUTPUT}.wsl"
+
     # The gnarly sed operation is here because the uutils-coreutils `ls` does not output the unit next to the size
     echo "Successfully built $(ls -s --block-size=M ${OUTPUT}.tar.gz | sed 's|\([[:digit:]]+*\) \(.*\)$|\1M \2|g') using ${COMPRESSOR} compression."
 
     echo -e "${GREEN}Build complete!${RESET}"
-    echo -e "${YELLOW}Output: ${FINAL_ISO}${RESET}"
-    echo -e ""
-    echo -e "On Windows, run: wsl --import AerynOS <install_dir> ${FINAL_ISO}"
+    echo -e "${YELLOW}Output: "
+    echo -e " ${OUTPUT}.tar.gz"
+    echo -e " ${OUTPUT}.wsl"
+    echo -e " ${RESET}"
+    echo -e "On Windows, run: wsl --import AerynOS <install_dir> ${OUTPUT}.tar.gz"
+    echo -e "or double-click ${OUTPUT}.wsl to install"
     echo -e ""
     echo -e "Then start it: wsl -d AerynOS"
     echo -e ""
@@ -289,10 +298,10 @@ build() {
 ask_to_continue () {
     # Show a status page up front before generating the iso to avoid surprises
 
-    echo -e "\nGenerating AerynOS linux-desktop ISO image using:\n"
+    echo -e "\nGenerating AerynOS WSL tarball & .wsl image using:\n"
     echo -e "- compression : ${COMPRESSOR}"
     echo -e "- package list: ${PACKAGE_LIST}"
-    echo -e "- output name : ${OUTPUT}.tar.gz"
+    echo -e "- output name : ${OUTPUT}.tar.gz & ${OUTPUT}.wsl"
     echo -e "- tmp dir     : ${TMPDIR}"
 
     if [[ "${ASK}" == "yes" ]]; then
