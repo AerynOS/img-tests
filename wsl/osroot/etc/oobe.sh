@@ -2,7 +2,7 @@
 
 set -ue
 
-DEFAULT_GROUPS='audio,adm,wheel,render,input,users,sudo'
+DEFAULT_GROUPS='audio,adm,wheel,render,input,users'
 DEFAULT_UID='1000'
 
 echo 'Please create a default UNIX user account. The username does not need to match your Windows username.'
@@ -19,11 +19,15 @@ while true; do
   read -p 'Enter new UNIX username: ' username
 
   # Create the user
-  if /usr/sbin/useradd --uid "$DEFAULT_UID" -c '' "$username"; then
+  if /usr/sbin/useradd --uid "$DEFAULT_UID" -c '' -d "/home/$username" -m -U -s "/usr/bin/bash" "$username"; then
 
     if /usr/sbin/usermod "$username" -aG "$DEFAULT_GROUPS"; then
+      echo "$username ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$username
+      echo "User $username created!"
+      passwd -d $username
       break
     else
+      echo "User $username deleted! :("
       /usr/sbin/userdel "$username"
     fi
   fi
