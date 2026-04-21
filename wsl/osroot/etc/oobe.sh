@@ -22,9 +22,9 @@ while true; do
   if /usr/sbin/useradd --uid "$DEFAULT_UID" -c '' -d "/home/$username" -m -U -s "/usr/bin/bash" "$username"; then
 
     if /usr/sbin/usermod "$username" -aG "$DEFAULT_GROUPS"; then
-      echo "$username ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$username
+      echo "$username ALL=(ALL) ALL" > /etc/sudoers.d/$username
       echo "User $username created!"
-      passwd -d $username
+      passwd $username
       break
     else
       echo "User $username deleted! :("
