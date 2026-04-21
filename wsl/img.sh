@@ -242,8 +242,17 @@ build() {
     echo ">>> Set up basic environment in ${SFSDIR}/ ..."
     time ${CHROOT} -D "${SFSDIR}" systemd-firstboot --force --delete-root-password --locale=en_US.UTF-8 --timezone=UTC --root-shell=/usr/bin/bash && echo ">>>>> systemd-firstboot run done."
 
+    # create user home directory
     mkdir "${SFSDIR}/home"
     chown -R root:root "${SFSDIR}/home"
+    # create sudo group
+    time ${CHROOT} -D "${SFSDIR}" groupadd sudo
+    # create mail group
+    time ${CHROOT} -D "${SFSDIR}" groupadd mail
+    # create mail directory for users
+    mkdir -p "${SFSDIR}/var/spool/mail"
+    chown -R root:root "${SFSDIR}/var/spool/mail"
+    # copy init file for wsl
     cp -R ${WORK}/osroot/* "${SFSDIR}/."
     chown -R root:root "${SFSDIR}/etc"
 
@@ -269,13 +278,20 @@ build() {
     # The gnarly sed operation is here because the uutils-coreutils `ls` does not output the unit next to the size
     echo "Successfully built $(ls -s --block-size=M ${OUTPUT}.tar.gz | sed 's|\([[:digit:]]+*\) \(.*\)$|\1M \2|g') using ${COMPRESSOR} compression."
 
+    echo -e "==============================================================="
+    echo -e "=                       AerynOS WSL                           ="
+    echo -e "==============================================================="
     echo -e "${GREEN}Build complete!${RESET}"
     echo -e "${YELLOW}Output: "
-    echo -e " ${OUTPUT}.tar.gz"
-    echo -e " ${OUTPUT}.wsl"
-    echo -e " ${RESET}"
-    echo -e "On Windows, run: wsl --import AerynOS <install_dir> ${OUTPUT}.tar.gz"
-    echo -e "or double-click ${OUTPUT}.wsl to install"
+    echo -e "   ${OUTPUT}.tar.gz"
+    echo -e "   ${OUTPUT}.wsl"
+    echo -e "   ${RESET}"
+    echo -e "On Windows, run: "
+    echo -e "   wsl --import AerynOS <install_dir> ${OUTPUT}.tar.gz"
+    echo -e "or "
+    echo -e "   wsl --install --from-file ${OUTPUT}.wsl "
+    echo -e "or "
+    echo -e "   double-click ${OUTPUT}.wsl to install"
     echo -e ""
     echo -e "Then start it: wsl -d AerynOS"
     echo -e ""
@@ -285,12 +301,12 @@ build() {
     echo -e "    sudo useradd -m your_username"
     echo -e "    sudo passwd your_username"
     echo -e "    sudo usermod -aG sudo your_username"
-    echo -e "  - Or just login as 'aerynos'"
     echo -e ""
     echo -e "${YELLOW}Post-install tasks:${RESET}"
     echo -e "  - sudo moss sync -u  # Update package index"
     echo -e "  - sudo moss install <packages>  # Install more packages"
     echo -e ""
+    echo -e "==============================================================="
 
     final_cleanup
 }
