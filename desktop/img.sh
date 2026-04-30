@@ -269,10 +269,10 @@ build() {
     time ${CHROOT} -D "${SFSDIR}" systemd-firstboot --force --delete-root-password --locale=en_US.UTF-8 --timezone=UTC --root-shell=/usr/bin/bash && echo ">>>>> systemd-firstboot run done."
 
     echo ">>> Force enable systemd presets in ${SFSDIR}/ ..."
-    time ${CHROOT} -D "${SFSDIR}" systemctl preset-all && echo ">>>>> systemctl preset-all run done."
+    time ${CHROOT} -D "${SFSDIR}" systemctl preset-all --force && echo ">>>>> systemctl preset-all run done."
 
     echo ">>> Force enable systemd --user presets in ${SFSDIR}/ ..."
-    time ${CHROOT} -D "${SFSDIR}" systemctl --user preset-all && echo ">>>>> systemctl --user preset-all run done."
+    time ${CHROOT} -D "${SFSDIR}" systemctl --user preset-all --force --global && echo ">>>>> systemctl --user preset-all run done."
 
     echo ">>> Configuring live user."
     time ${CHROOT} -D "${SFSDIR}" useradd -c "Live User" -d "/home/live" -G "audio,adm,wheel,render,input,users" -m -U -s "/usr/bin/bash" live
