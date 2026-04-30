@@ -9,7 +9,7 @@ liberation-fonts-ttf
 
 # Shared Kernel and Boot related stuff
 kmod
-linux-desktop
+linux-stable
 linux-firmware
 linux-firmware-amd
 linux-firmware-intel
