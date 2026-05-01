@@ -287,7 +287,7 @@ build() {
     echo -e "On Windows, run: "
     echo -e "   wsl --import AerynOS <install_dir> ${OUTPUT}.tar.gz"
     echo -e "or "
-    echo -e "   wsl --install --from-file ${OUTPUT}.wsl "
+    echo -e "   wsl --install --from-file ${OUTPUT}.wsl [--location <install_dir>]"
     echo -e "or "
     echo -e "   double-click ${OUTPUT}.wsl to install"
     echo -e ""
