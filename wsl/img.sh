@@ -49,7 +49,7 @@ function usage() {
     echo -e "\nUsage: sudo ./img.sh -o <output>.tar.gz -p <package list> -t <tmpdir> -y\n"
     print_valid_compression_types
     echo -e "\nThe default compression type is gzip (supported by WSL)."
-    echo -e "\nThe default output is 'aerynos_wsl' (becomes 'aerynos_wsl.tar.gz')."
+    echo -e "\nThe default output is 'aerynos' (becomes 'aerynos.tar.gz')."
     echo -e "\nThe default package list is the file 'minimal_pkglist'."
     echo -e "\nThe default tmp dir is '/tmp' (on some distros, /var/tmp must be used due to permissions)."
     echo -e "\nTip: Adding '-y' specifies that you do not want to be prompted to continue generating the tar.gz."
