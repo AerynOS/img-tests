@@ -51,9 +51,9 @@ build-wsl:
     cd wsl && sudo {{img_script}} -c gzip -o aerynos -p minimal_pkglist -y
 
 # Build release ISOs for the GNOME and COSMIC flavours
-release:
-    just build flavor="gnome" compression="zstd3"
-    just build flavor="cosmic" compression="zstd3"
+#release:
+#    just flavor="gnome" compression="zstd19" build
+#    just flavor="cosmic" compression="zstd3" build
 
 [confirm('This will delete ALL found .iso images -- continue?')]
 _clean:
