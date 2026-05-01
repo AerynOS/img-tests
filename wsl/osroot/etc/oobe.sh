@@ -2,7 +2,7 @@
 
 set -ue
 
-DEFAULT_GROUPS='audio,adm,wheel,render,input,users,sudo,plugdev'
+DEFAULT_GROUPS='audio,adm,wheel,render,input,users,plugdev'
 DEFAULT_UID='1000'
 
 echo 'Please create a default UNIX user account. The username does not need to match your Windows username.'
