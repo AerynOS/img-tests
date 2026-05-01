@@ -48,7 +48,7 @@ build-and-boot: build boot
 
 # Build release For WSL (Windows subsystem for linux)
 build-wsl:
-    cd wsl && {{img_script}} -c gzip -o aerynos_wsl -p minimal_pkglist
+    cd wsl && sudo {{img_script}} -c gzip -o aerynos -p minimal_pkglist -y
 
 # Build release ISOs for the GNOME and COSMIC flavours
 release:
