@@ -245,8 +245,6 @@ build() {
     # create user home directory
     mkdir "${SFSDIR}/home"
     chown -R root:root "${SFSDIR}/home"
-    # create sudo group
-    time ${CHROOT} -D "${SFSDIR}" groupadd sudo
     # create mail group
     time ${CHROOT} -D "${SFSDIR}" groupadd mail
     # create mail directory for users
