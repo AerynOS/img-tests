@@ -286,7 +286,7 @@ build() {
 
     echo ">>> Extract assets..."
     cp -av "${SFSDIR}/usr/lib/systemd/boot/efi/systemd-bootx64.efi" "${BOOT}/bootx64.efi"
-    cp -av "${SFSDIR}"/usr/lib/kernel/*/vmlinuz "${BOOT}/kernel"
+    cp -av "${SFSDIR}"/usr/lib/modules/*/vmlinux "${BOOT}/kernel"
 
     echo ">>> Install dracut in ${SFSDIR}/ ..."
     time ${MOSS} install "${initrd[@]}" -y || die_and_cleanup "Failed to install initrd packages!"
