@@ -50,10 +50,21 @@ build-and-boot: build boot
 build-wsl:
     cd wsl && sudo {{img_script}} -c gzip -o aerynos -p minimal_pkglist -y
 
-# Build release ISOs for the GNOME and COSMIC flavours
-#release:
-#    just flavor="gnome" compression="zstd19" build
-#    just flavor="cosmic" compression="zstd3" build
+# Build release ISO for the GNOME flavour
+release-gnome:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    _yyyymm="$(date +%Y.%m)"
+    _output="AerynOS-${_yyyymm}-GNOME-live-x86_64"
+    just flavor="gnome" compression="zstd19" output="${_output}" build
+
+# Test newly built release ISO for the GNOME flavour
+test-gnome-release:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    _yyyymm="$(date +%Y.%m)"
+    _output="AerynOS-${_yyyymm}-GNOME-live-x86_64"
+    just flavor="gnome" compression="zstd19" output="${_output}" boot
 
 [confirm('This will delete ALL found .iso images -- continue?')]
 _clean:
