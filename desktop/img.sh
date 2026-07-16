@@ -6,6 +6,10 @@
 #
 # AerynOS prototype linux-desktop ISO image generator
 #
+
+set -euo pipefail
+
+
 die () {
     echo -e "$*"
     exit 1
@@ -257,7 +261,7 @@ build() {
     export MOSS="moss -D ${SFSDIR} --cache ${CACHE}"
 
     echo ">>> Add volatile AerynOS repository to ${SFSDIR}/ ..."
-    time ${MOSS} repo add volatile https://build.aerynos.dev/stream/volatile/x86_64/stone.index || die_and_cleanup "Adding moss repo failed!"
+    time ${MOSS} repo add volatile https://cdn.aerynos.dev --root-index channel=main,version=stream/volatile || die_and_cleanup "Adding moss repo failed!"
 
     #echo ">>> Add local repo to ${SFSDIR}/ ..."
     #time ${MOSS} repo add local file:///home/ermo/.cache/local_repo/x86_64/stone.index -p10 || die_and_cleanup "Adding moss repo failed!"
