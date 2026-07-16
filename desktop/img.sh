@@ -229,7 +229,7 @@ final_cleanup() {
     cleanup
 
     # all exported variables need to be unset
-    for v in BOOT CACHE CHROOT MOSS MOUNT RUST_BACKTRACE SFSDIR; do
+    for v in BOOT CACHE CHROOT MOSS MOUNT RUST_BACKTRACE AFSDIR; do
         unset "${v}" || true
     done
 }
@@ -241,7 +241,7 @@ build() {
     export BOOT="${TMPFS}/boot"
     export CACHE="${WORK}/cached_stones"
     export MOUNT="${TMPFS}/mount"
-    export SFSDIR="${TMPFS}/aerynosfs"
+    export AFSDIR="${TMPFS}/aerynosfs"
     export CHROOT="systemd-nspawn --as-pid2 --private-users=identity --user=0 --quiet"
 
     # Use a permanent cache for downloaded .stones
@@ -251,58 +251,58 @@ build() {
     mkdir -pv "${BOOT}"
 
     # Get it right first time.
-    mkdir -pv "${MOUNT}" "${SFSDIR}"
-    chown -Rc root:root "${MOUNT}" "${SFSDIR}"
+    mkdir -pv "${MOUNT}" "${AFSDIR}"
+    chown -Rc root:root "${MOUNT}" "${AFSDIR}"
     # Only chmod directories
-    chmod -Rc u=rwX,g=rX,o=rX "${MOUNT}" "${SFSDIR}"
+    chmod -Rc u=rwX,g=rX,o=rX "${MOUNT}" "${AFSDIR}"
 
     export RUST_BACKTRACE=1
 
-    export MOSS="moss -D ${SFSDIR} --cache ${CACHE}"
+    export MOSS="moss -D ${AFSDIR} --cache ${CACHE}"
 
-    echo ">>> Add volatile AerynOS repository to ${SFSDIR}/ ..."
+    echo ">>> Add volatile AerynOS repository to ${AFSDIR}/ ..."
     time ${MOSS} repo add volatile https://cdn.aerynos.dev --root-index channel=main,version=stream/volatile || die_and_cleanup "Adding moss repo failed!"
 
-    #echo ">>> Add local repo to ${SFSDIR}/ ..."
+    #echo ">>> Add local repo to ${AFSDIR}/ ..."
     #time ${MOSS} repo add local file:///home/ermo/.cache/local_repo/x86_64/stone.index -p10 || die_and_cleanup "Adding moss repo failed!"
 
-    echo ">>> Install packages to ${SFSDIR}/ ..."
+    echo ">>> Install packages to ${AFSDIR}/ ..."
     time ${MOSS} install -y "${PACKAGES[@]}" || die_and_cleanup "Installing packages failed!"
 
-    echo ">>> Set up basic environment in ${SFSDIR}/ ..."
-    time ${CHROOT} -D "${SFSDIR}" systemd-firstboot --force --delete-root-password --locale=en_US.UTF-8 --timezone=UTC --root-shell=/usr/bin/bash && echo ">>>>> systemd-firstboot run done."
+    echo ">>> Set up basic environment in ${AFSDIR}/ ..."
+    time ${CHROOT} -D "${AFSDIR}" systemd-firstboot --force --delete-root-password --locale=en_US.UTF-8 --timezone=UTC --root-shell=/usr/bin/bash && echo ">>>>> systemd-firstboot run done."
 
-    echo ">>> Force enable systemd presets in ${SFSDIR}/ ..."
-    time ${CHROOT} -D "${SFSDIR}" systemctl preset-all --force --system && echo ">>>>> systemctl preset-all --system run done."
+    echo ">>> Force enable systemd presets in ${AFSDIR}/ ..."
+    time ${CHROOT} -D "${AFSDIR}" systemctl preset-all --force --system && echo ">>>>> systemctl preset-all --system run done."
 
-    echo ">>> Force enable systemd global user presets in ${SFSDIR}/ ..."
-    time ${CHROOT} -D "${SFSDIR}" systemctl preset-all --force --global && echo ">>>>> systemctl preset-all --global run done."
+    echo ">>> Force enable systemd global user presets in ${AFSDIR}/ ..."
+    time ${CHROOT} -D "${AFSDIR}" systemctl preset-all --force --global && echo ">>>>> systemctl preset-all --global run done."
 
     echo ">>> Configuring live user."
-    time ${CHROOT} -D "${SFSDIR}" useradd -c "Live User" -d "/home/live" -G "audio,adm,wheel,render,input,users" -m -U -s "/usr/bin/bash" live
-    cp -R ${WORK}/rootfs_extra/etc/* "${SFSDIR}/etc/."
-    chown -R root:root "${SFSDIR}/etc"
-    ${CHROOT} -D "${SFSDIR}" chown -R live:live /home/live
-    ${CHROOT} -D "${SFSDIR}" passwd -d live
+    time ${CHROOT} -D "${AFSDIR}" useradd -c "Live User" -d "/home/live" -G "audio,adm,wheel,render,input,users" -m -U -s "/usr/bin/bash" live
+    cp -R ${WORK}/rootfs_extra/etc/* "${AFSDIR}/etc/."
+    chown -R root:root "${AFSDIR}/etc"
+    ${CHROOT} -D "${AFSDIR}" chown -R live:live /home/live
+    ${CHROOT} -D "${AFSDIR}" passwd -d live
 
     echo ">>> Forcibly refreshing flatpak."
-    time ${CHROOT} -D "${SFSDIR}" flatpak update --system --appstream --no-deps --no-related -v
+    time ${CHROOT} -D "${AFSDIR}" flatpak update --system --appstream --no-deps --no-related -v
 
     echo ">>> Extract assets..."
-    cp -av "${SFSDIR}/usr/lib/systemd/boot/efi/systemd-bootx64.efi" "${BOOT}/bootx64.efi"
-    cp -av "${SFSDIR}"/usr/lib/modules/*/vmlinux "${BOOT}/kernel"
+    cp -av "${AFSDIR}/usr/lib/systemd/boot/efi/systemd-bootx64.efi" "${BOOT}/bootx64.efi"
+    cp -av "${AFSDIR}"/usr/lib/modules/*/vmlinux "${BOOT}/kernel"
 
-    echo ">>> Install dracut in ${SFSDIR}/ ..."
+    echo ">>> Install dracut in ${AFSDIR}/ ..."
     time ${MOSS} install "${initrd[@]}" -y || die_and_cleanup "Failed to install initrd packages!"
 
     echo ">>> Regenerate dracut..."
-    kver=$(ls "${SFSDIR}/usr/lib/modules")
-    time ${CHROOT} -D "${SFSDIR}/" \
+    kver=$(ls "${AFSDIR}/usr/lib/modules")
+    time ${CHROOT} -D "${AFSDIR}/" \
         dracut --early-microcode --hardlink -N --nomdadmconf --nolvmconf \
             --kver ${kver} --add "bash dash systemd lvm dm dmsquash-live plymouth" \
             --fwdir /usr/lib/firmware --tmpdir /tmp --zstd --strip /initrd -v \
             --add-drivers "amdgpu hyperv_drm i915 nouveau qxl radeon simpledrm vboxvideo virtio-gpu vmwgfx xe"
-    mv -v "${SFSDIR}/initrd" "${BOOT}/initrd"
+    mv -v "${AFSDIR}/initrd" "${BOOT}/initrd"
 
     echo ">>> Generate name-version-release file for use by e.g. distrowatch..."
     time ${MOSS} li |gawk '{print $1 " " $2}' |sort -h > "${OUTPUT}.iso.nvr"
@@ -312,19 +312,19 @@ build() {
     time ${MOSS} state prune -k 1 --include-newer -y || die_and_cleanup "Failed to prune moss state in ${TMPFS}/ !"
 
     # Remove downloaded .stones to lower size of generated ISO
-    rm -rf "${SFSDIR}"/.moss/cache/downloads/*
+    rm -rf "${AFSDIR}"/.moss/cache/downloads/*
 
-    SFSSIZE=$(du -BMiB -s ${TMPFS}|cut -f1|sed -e 's|MiB||g')
-    echo ">>> ${SFSDIR} size: ${SFSSIZE} MiB"
+    AFSSIZE=$(du -BMiB -s ${TMPFS}|cut -f1|sed -e 's|MiB||g')
+    echo ">>> ${AFSDIR} size: ${AFSSIZE} MiB"
 
     echo ">>> Generate the LiveOS image structure..."
     mkdir -pv "${TMPFS}/root/LiveOS/"
 
     # Show the contents that will get included to satisfy ourselves that the source dirs specified below are sufficient
-    ls -la "${SFSDIR}/"
+    ls -la "${AFSDIR}/"
 
     echo ">>> Compress the LiveOS squashfs.img using the ${COMPRESSOR} compression preset..."
-    time mksquashfs "${SFSDIR}"/* "${SFSDIR}/.moss" "${TMPFS}/root/LiveOS/squashfs.img" \
+    time mksquashfs "${AFSDIR}"/* "${AFSDIR}/.moss" "${TMPFS}/root/LiveOS/squashfs.img" \
       -root-becomes LiveOS -keep-as-directory -b 1M -progress -comp ${COMPRESSION_ARGS[$COMPRESSOR]}
 
     echo ">>> Create and mount the efi.img backing file..."
