@@ -9,7 +9,6 @@
 
 set -euo pipefail
 
-
 die () {
     echo -e "$*"
     exit 1

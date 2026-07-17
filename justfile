@@ -58,6 +58,14 @@ release-gnome:
     _output="AerynOS-${_yyyymm}-GNOME-live-x86_64"
     just flavor="gnome" compression="zstd19" output="${_output}" build
 
+# Build release ISO for the Plasma flavour
+release-plasma:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    _yyyymm="$(date +%Y.%m)"
+    _output="AerynOS-${_yyyymm}-Plasma-live-x86_64"
+    just flavor="plasma" compression="zstd19" output="${_output}" build
+
 # Test newly built release ISO for the GNOME flavour
 test-gnome-release:
     #!/usr/bin/env bash
@@ -65,6 +73,14 @@ test-gnome-release:
     _yyyymm="$(date +%Y.%m)"
     _output="AerynOS-${_yyyymm}-GNOME-live-x86_64"
     just flavor="gnome" compression="zstd19" output="${_output}" boot
+
+# Test newly built release ISO for the Plasma flavour
+test-plasma-release:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    _yyyymm="$(date +%Y.%m)"
+    _output="AerynOS-${_yyyymm}-Plasma-live-x86_64"
+    just flavor="plasma" compression="zstd19" output="${_output}" boot
 
 [confirm('This will delete ALL found .iso images -- continue?')]
 _clean:
